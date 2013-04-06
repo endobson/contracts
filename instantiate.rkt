@@ -17,7 +17,9 @@
     (match sc
       ((simple-contract _ _) acc)
       ((recursive-contract-use _) acc)
-      ((recursive-contract name body) (recur body (cons sc acc)))
+      ((recursive-contract names values body)
+       (for/fold ((acc (cons sc acc))) ((arg (cons body values)))
+         (recur arg acc)))
       ((combinator _ args)
        (for/fold ((acc acc)) ((arg args))
          (recur arg acc)))))
@@ -26,27 +28,31 @@
 (define (compute-recursive-kinds parts)
   (define eqs (make-equation-set))
   (define vars
-    (for/hash ((part parts))
-      (values (recursive-contract-name part)
+    (for*/hash ((part parts)
+                (name (recursive-contract-names part)))
+      (values name 
               (add-variable! eqs 'flat))))
   (define (get-kind sc)
     (match sc
-      ((simple-contract _ kind) (thunk kind))
-      ((or (recursive-contract-use name) (recursive-contract name _))
-       (define var (hash-ref vars name))
-       (thunk (variable-ref var)))
-      ((flat-combinator _ args)
+      [(simple-contract _ kind) (thunk kind)]
+      [(recursive-contract-use name)
+       (thunk (variable-ref (hash-ref vars name)))]
+      [(recursive-contract names values body)
+       (get-kind body)]
+      [(flat-combinator _ args)
        (define kinds (map get-kind args))
-       (thunk (combine-kinds (map (lambda (f) (f)) kinds))))
-      ((chaperone-combinator _ args)
+       (thunk (combine-kinds (map (lambda (f) (f)) kinds)))]
+      [(chaperone-combinator _ args)
        (define kinds (map get-kind args))
-       (thunk (combine-kinds (cons 'chaperone (map (lambda (f) (f)) kinds)))))
-      ((impersonator-combinator _ args)
-       (thunk 'impersonator))))
-  (for ((part parts))
-    (add-equation! eqs
-      (hash-ref vars (recursive-contract-name part))
-      (get-kind part)))
+       (thunk (combine-kinds (cons 'chaperone (map (lambda (f) (f)) kinds))))]
+      [(impersonator-combinator _ args)
+       (thunk 'impersonator)]))
+  (for ([part parts])
+    (for ([name (recursive-contract-names part)]
+          [value (recursive-contract-values part)])
+      (add-equation! eqs
+        (hash-ref vars name)
+        (get-kind value))))
   (define var-values (resolve-equations eqs))
   (for/hash (((name var) vars))
     (values name (hash-ref var-values var))))
@@ -54,12 +60,15 @@
 (define (instantiate/inner sc recursive-kinds)
   (define (recur sc)
     (match sc
-      ((simple-contract stx _) stx)
-      ((recursive-contract-use stx) stx)
-      ((recursive-contract name body)
-       (define kind (hash-ref recursive-kinds name))
-       #`(letrec ((name (recursive-contract #,(recur body) #,(kind->keyword kind))))
-           name))
-      ((combinator make-stx args)
-       (apply make-stx (map recur args)))))
+      [(simple-contract stx _) stx]
+      [(recursive-contract-use stx) stx]
+      [(recursive-contract names values body)
+       (define bindings
+         (for/list ([name names] [value values])
+            #`[#,name (recursive-contract #,(recur value) 
+                                          #,(kind->keyword
+                                              (hash-ref recursive-kinds name)))]))
+       #`(letrec #,bindings #,(recur body))]
+      [(combinator make-stx args)
+       (apply make-stx (map recur args))]))
   (recur sc))

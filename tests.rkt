@@ -34,10 +34,6 @@
     (-lst -Number)
     (-Number . -> . -Number)))
 
-(for ((type types-to-test))
-  (displayln (syntax->datum
-    (instantiate (type->static-contract type (lambda (_)
-                                                  (error 'testing "type could not be converted to a contract")))))))
 
 (require rackunit/text-ui)
-;(run-tests contract-tests)
+(void (run-tests contract-tests))

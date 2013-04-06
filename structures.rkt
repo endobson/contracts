@@ -13,7 +13,7 @@
 
 
 (struct simple-contract (syntax kind))
-(struct recursive-contract (name body))
+(struct recursive-contract (names values body))
 (struct recursive-contract-use (name))
 (struct combinator (make-syntax args))
 (struct flat-combinator combinator ())

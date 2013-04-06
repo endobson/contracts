@@ -25,16 +25,33 @@
 (define (no-duplicates l)
   (= (length l) (length (remove-duplicates l))))
 
+(define (from-typed? side)
+  (case side
+   [(typed both) #t]
+   [(untyped) #f]))
 
-(define (type->static-contract type fail #:out (out? #f) #:from-typed? (from-typed? #f))
+(define (from-untyped? side)
+  (case side
+   [(untyped both) #t]
+   [(typed) #f]))
 
-  (let loop ([type type] [pos? #t] [from-typed? from-typed?] [recursive-values (hash)])
+(define (flip-side side)
+  (case side
+   [(typed) 'untyped]
+   [(untyped) 'typed]
+   [(both) 'both]))
+
+
+
+(define (type->static-contract type fail #:typed-side [typed-side #t])
+
+  (let loop ([type type] [typed-side typed-side] [recursive-values (hash)])
     (define (t->sc t #:recursive-values (recursive-values recursive-values))
-      (loop t pos? from-typed? recursive-values))
+      (loop t typed-side recursive-values))
     (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
-      (loop t (not pos?) (not from-typed?) recursive-values))
-    (define (t->sc/method t) (t->sc/function t fail out? pos? from-typed? recursive-values loop #t))
-    (define (t->sc/fun t) (t->sc/function t fail out? pos? from-typed? recursive-values loop #f))
+      (loop t (flip-side typed-side) recursive-values))
+    (define (t->sc/method t) (t->sc/function t fail typed-side recursive-values loop #t))
+    (define (t->sc/fun t) (t->sc/function t fail typed-side recursive-values loop #f))
     (match type
       [(or (App: _ _ _) (Name: _)) (t->sc (resolve-once type))]
       [(Univ:) (if from-typed? any-wrap/sc any/sc)]
@@ -71,7 +88,7 @@
        (cond [(assoc v recursive-values) => second]
              [else (int-err "unknown var: ~a" v)])]
       [(Poly: vs b)
-       (if from-typed?
+       (if (from-typed? typed-side)
            ;; in positive position, no checking needed for the variables
            (let ((recursive-values (for/fold ([rv recursive-values]) ([v vs])
                                      (hash-set rv v any/sc))))
@@ -89,7 +106,6 @@
        (recursive-contract
          n*
          (t->sc b #:recursive-values (hash-set recursive-values n (recursive-contract-use n*))))]
-      [(Value: #f) false/sc]
       [(Instance: (? Mu? t))
        (t->sc (make-Instance (resolve-once t)))]
       [(Instance: (Class: _ _ (list (list names functions) ...)))
@@ -126,13 +142,13 @@
       [else
        (exit (fail))])))
 
-(define (t->sc/function f fail out? pos? from-typed? recursive-values loop method?)
+(define (t->sc/function f fail typed-side recursive-values loop method?)
   (define (t->sc t #:recursive-values (recursive-values recursive-values))
-    (loop t pos? from-typed? recursive-values))
+    (loop t typed-side recursive-values))
   (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
-    (loop t (not pos?) (not from-typed?) recursive-values))
+    (loop t (flip-side typed-side) recursive-values))
   (match f
-    [(Function: (list (top-arr:))) (if pos? #'(case->) #'procedure?)]
+    [(Function: (list (top-arr:))) #'(case->)]
     [(Function: arrs)
      ;; Try to generate a single `->*' contract if possible.
      ;; This allows contracts to be generated for functions with both optional and keyword args.
@@ -206,7 +222,7 @@
             (convert-arr a)]
            ;; functions with filters or objects
            [(arr: dom (Values: (list (Result: rngs _ _) ...)) rst #f kws)
-            (if (and out? pos?)
+            (if typed-side
                 (convert-arr a)
                 (exit (fail)))]
            [_ (exit (fail))]))

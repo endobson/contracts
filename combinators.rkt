@@ -84,7 +84,6 @@
 (define (class/sc* methods) (error 'nyi))
 
 
-(define false/sc (false-combinator #'false/c 'flat))
 (define empty/sc (empty-combinator #'empty? 'flat))
 (define any/sc (any-combinator #'any/c 'flat))
 (define identifier/sc (identifier-combinator #'identifier? 'flat))
