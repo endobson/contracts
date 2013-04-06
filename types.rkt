@@ -18,6 +18,8 @@
 
 (require "structures.rkt" "combinators.rkt")
 
+(provide type->static-contract)
+
 (define any-wrap/sc (simple-contract #'any-wrap/c 'impersonator))
 
 (define (no-duplicates l)
@@ -74,14 +76,14 @@
            (let ((recursive-values (for/fold ([rv recursive-values]) ([v vs])
                                      (hash-set rv v any/sc))))
              (t->sc b #:recursive-values recursive-values))
-           (error 'nyi)
            ;; in negative position, use `parameteric/c'
-           #;
-           (match-let ([(Poly-names: vs-nm _) ty])
-             (with-syntax ([(v ...) (generate-temporaries vs-nm)])
-               (parameterize ([vars (append (map list vs (syntax->list #'(v ...)))
-                                            (vars))])
-                 (parametric->/sc (v ...) #,(t->c b))))))]
+           (match-let ([(Poly-names: vs-nm _) type])
+             (let ((temporaries (generate-temporaries vs-nm)))
+               (define rv (for/fold ((rv recursive-values)) ((temp temporaries)
+                                                             (v-nm vs-nm))
+                            (hash-set rv v-nm (simple-contract temp 'impersonator))))
+               (parametric->/sc temporaries
+                  (t->sc b #:recursive-values rv)))))]
       [(Mu: n b)
        (define n* (generate-temporary n))
        (recursive-contract
@@ -97,38 +99,26 @@
        (class/sc* (map list names (map t->sc/method functions))
                   (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
       [(Value: '()) empty/sc]
-      #; ;TODO
       [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
        (cond
-         [(assf (λ (t) (type-equal? t ty)) structs-seen)
-          =>
-          cdr]
+         [(assf (λ (v) (equal? v nm)) recursive-values) => second]
          [proc (exit (fail))]
-         [(and (equal? kind flat-sym) (ormap values mut?))
-          (exit (fail))]
          [poly?
-          (with-syntax* ([struct-ctc (generate-temporary 'struct-ctc)])
-            (define field-contracts
-              (for/list ([fty flds] [mut? mut?])
-                (with-syntax* ([rec (generate-temporary 'rec)])
-                  (define required-recursive-kind
-                     (contract-kind-min kind (if mut? impersonator-sym chaperone-sym)))
-                  ;(printf "kind: ~a mut-k: ~a req-rec-kind: ~a\n"
-                  ;        kind (if mut? impersonator-sym chaperone-sym) required-recursive-kind)
-                  (parameterize ((current-contract-kind (contract-kind-min kind chaperone-sym)))
-                    (let ((fld-ctc (t->c fty #:seen (cons (cons ty #'rec) structs-seen)
-                                         #:kind required-recursive-kind)))
-                      #`(let ((rec (recursive-contract
-                                     struct-ctc #,(contract-kind->keyword (current-contract-kind)))))
-                          #,fld-ctc))))))
-            #`(letrec ((struct-ctc (struct/c #,nm #,@field-contracts))) struct-ctc))]
-         [else #`(flat-named-contract '#,(syntax-e pred?) #,pred?)])]
+          (define nm* (generate-temporary #'n*))
+          (define fields
+            (for/list ([fty flds] [mut? mut?])
+              (define sc
+                (t->sc fty #:recursive-values (hash-set
+                                                recursive-values
+                                                nm (recursive-contract-use nm*))))
+              (if mut? sc (chaperone-restrict sc))))
+          (recursive-contract nm* (struct/sc nm fields))]
+         [else (flat/sc #`(flat-named-contract '#,(syntax-e pred?) #,pred?))])]
       [(Syntax: (Base: 'Symbol _ _ _ _)) identifier/sc]
       [(Syntax: t)
        (syntax/sc (t->sc t))]
       [(Value: v)
        (flat/sc #`(flat-named-contract #,(format "~a" v) (lambda (x) (equal? x '#,v))))]
-      ;; TODO Is this sound?
       [(Param: in out) 
        (parameter/sc (t->sc in) (t->sc out))]
       [(Hashtable: k v)
@@ -231,54 +221,60 @@
            (case->/sc (map (f #t) arrs)))])]
     [_ (int-err "not a function" f)]))
 
+(define-syntax-rule (numeric/sc name body)
+ (flat/sc #'(flat-named-contract 'name body)))
+(module predicates racket/base
+  (provide nonnegative? nonpositive?)
+  (define nonnegative? #'(lambda (x) (>= x 0)))
+  (define nonpositive? #'(lambda (x) (<= x 0))))
+(require (for-template 'predicates))
 
-(define positive-byte/sc (flat/sc #'(flat-named-contract 'Positive-Byte (and/c byte? positive?))))
-
-(define byte/sc (flat/sc #'(flat-named-contract 'Byte byte?)))
-(define positive-index/sc (flat/sc #'(flat-named-contract 'Positive-Index (and/c t:index? positive?))))
-(define index/sc (flat/sc #'(flat-named-contract 'Index t:index?)))
-(define positive-fixnum/sc (flat/sc #'(flat-named-contract 'Positive-Fixnum (and/c fixnum? positive?))))
-(define nonnegative-fixnum/sc (flat/sc #'(flat-named-contract 'Nonnegative-Fixnum (and/c fixnum? (lambda (x) (>= x 0))))))
-(define nonpositive-fixnum/sc (flat/sc #'(flat-named-contract 'Nonpositive-Fixnum (and/c fixnum? (lambda (x) (<= x 0))))))
-(define fixnum/sc (flat/sc #'(flat-named-contract 'Fixnum fixnum?)))
-(define positive-integer/sc (flat/sc #'(flat-named-contract 'Positive-Integer (and/c exact-integer? positive?))))
-(define natural/sc (flat/sc #'(flat-named-contract 'Natural (and/c exact-integer? (lambda (x) (>= x 0))))))
-(define negative-integer/sc (flat/sc #'(flat-named-contract 'Negative-Integer (and/c exact-integer? negative?))))
-(define nonpositive-integer/sc (flat/sc #'(flat-named-contract 'Nonpositive-Integer (and/c exact-integer? (lambda (x) (<= x 0))))))
-(define integer/sc (flat/sc #'(flat-named-contract 'Integer exact-integer?)))
-(define positive-rational/sc (flat/sc #'(flat-named-contract 'Positive-Rational (and/c t:exact-rational? positive?))))
-(define nonnegative-rational/sc (flat/sc #'(flat-named-contract 'Nonnegative-Rational (and/c t:exact-rational? (lambda (x) (>= x 0))))))
-(define negative-rational/sc (flat/sc #'(flat-named-contract 'Negative-Rational (and/c t:exact-rational? negative?))))
-(define nonpositive-rational/sc (flat/sc #'(flat-named-contract 'Nonpositive-Rational (and/c t:exact-rational? (lambda (x) (<= x 0))))))
-(define rational/sc (flat/sc #'(flat-named-contract 'Rational t:exact-rational?)))
-(define flonum-zero/sc (flat/sc #'(flat-named-contract 'Float-Zero (and/c flonum? zero?))))
-(define nonnegative-flonum/sc (flat/sc #'(flat-named-contract 'Nonnegative-Float (and/c flonum? (lambda (x) (>= x 0))))))
-(define nonpositive-flonum/sc (flat/sc #'(flat-named-contract 'Nonpositive-Float (and/c flonum? (lambda (x) (<= x 0))))))
-(define flonum/sc (flat/sc #'(flat-named-contract 'Float flonum?)))
-(define single-flonum-zero/sc (flat/sc #'(flat-named-contract 'Single-Flonum-Zero (and/c single-flonum? zero?))))
-(define inexact-real-zero/sc (flat/sc #'(flat-named-contract 'Inexact-Real-Zero (and/c inexact-real? zero?))))
-(define positive-inexact-real/sc (flat/sc #'(flat-named-contract 'Positive-Inexact-Real (and/c inexact-real? positive?))))
-(define nonnegative-single-flonum/sc (flat/sc #'(flat-named-contract 'Nonnegative-Single-Flonum (and/c single-flonum? (lambda (x) (>= x 0))))))
-(define nonnegative-inexact-real/sc (flat/sc #'(flat-named-contract 'Nonnegative-Inexact-Real (and/c inexact-real? (lambda (x) (>= x 0))))))
-(define negative-inexact-real/sc (flat/sc #'(flat-named-contract 'Negative-Inexact-Real (and/c inexact-real? negative?))))
-(define nonpositive-single-flonum/sc (flat/sc #'(flat-named-contract 'Nonpositive-Single-Flonum (and/c single-flonum? (lambda (x) (<= x 0))))))
-(define nonpositive-inexact-real/sc (flat/sc #'(flat-named-contract 'Nonpositive-Inexact-Real (and/c inexact-real? (lambda (x) (<= x 0))))))
-(define single-flonum/sc (flat/sc #'(flat-named-contract 'Single-Flonum single-flonum?)))
-(define inexact-real/sc (flat/sc #'(flat-named-contract 'Inexact-Real inexact-real?)))
-(define real-zero/sc (flat/sc #'(flat-named-contract 'Real-Zero (and/c real? zero?))))
-(define positive-real/sc (flat/sc #'(flat-named-contract 'Positive-Real (and/c real? positive?))))
-(define nonnegative-real/sc (flat/sc #'(flat-named-contract 'Nonnegative-Real (and/c real? (lambda (x) (>= x 0))))))
-(define negative-real/sc (flat/sc #'(flat-named-contract 'Negative-Real (and/c real? negative?))))
-(define nonpositive-real/sc (flat/sc #'(flat-named-contract 'Nonpositive-Real (and/c real? (lambda (x) (<= x 0))))))
-(define real/sc (flat/sc #'(flat-named-contract 'Real real?)))
-(define exact-number/sc (flat/sc #'(flat-named-contract 'Exact-Number (and/c number? exact?))))
+(define positive-byte/sc (numeric/sc Positive-Byte (and/c byte? positive?)))
+(define byte/sc (numeric/sc Byte byte?))
+(define positive-index/sc (numeric/sc Positive-Index (and/c t:index? positive?)))
+(define index/sc (numeric/sc Index t:index?))
+(define positive-fixnum/sc (numeric/sc Positive-Fixnum (and/c fixnum? positive?)))
+(define nonnegative-fixnum/sc (numeric/sc Nonnegative-Fixnum (and/c fixnum? non-negative)))
+(define nonpositive-fixnum/sc (numeric/sc Nonpositive-Fixnum (and/c fixnum? non-positive)))
+(define fixnum/sc (numeric/sc Fixnum fixnum?))
+(define positive-integer/sc (numeric/sc Positive-Integer (and/c exact-integer? positive?)))
+(define natural/sc (numeric/sc Natural exact-nonegative-integer?))
+(define negative-integer/sc (numeric/sc Negative-Integer (and/c exact-integer? negative?)))
+(define nonpositive-integer/sc (numeric/sc Nonpositive-Integer (and/c exact-integer? nonpostive?)))
+(define integer/sc (numeric/sc Integer exact-integer?))
+(define positive-rational/sc (numeric/sc Positive-Rational (and/c t:exact-rational? positive?)))
+(define nonnegative-rational/sc (numeric/sc Nonnegative-Rational (and/c t:exact-rational? nonnegative?)))
+(define negative-rational/sc (numeric/sc Negative-Rational (and/c t:exact-rational? negative?)))
+(define nonpositive-rational/sc (numeric/sc Nonpositive-Rational (and/c t:exact-rational? nonpositive?)))
+(define rational/sc (numeric/sc Rational t:exact-rational?))
+(define flonum-zero/sc (numeric/sc Float-Zero (and/c flonum? zero?)))
+(define nonnegative-flonum/sc (numeric/sc Nonnegative-Float (and/c flonum? nonnegative?)))
+(define nonpositive-flonum/sc (numeric/sc Nonpositive-Float (and/c flonum? nonpositive?)))
+(define flonum/sc (numeric/sc Float flonum?))
+(define single-flonum-zero/sc (numeric/sc Single-Flonum-Zero (and/c single-flonum? zero?)))
+(define inexact-real-zero/sc (numeric/sc Inexact-Real-Zero (and/c inexact-real? zero?)))
+(define positive-inexact-real/sc (numeric/sc Positive-Inexact-Real (and/c inexact-real? positive?)))
+(define nonnegative-single-flonum/sc (numeric/sc Nonnegative-Single-Flonum (and/c single-flonum? nonnegative?)))
+(define nonnegative-inexact-real/sc (numeric/sc Nonnegative-Inexact-Real (and/c inexact-real? nonpositive?)))
+(define negative-inexact-real/sc (numeric/sc Negative-Inexact-Real (and/c inexact-real? negative?)))
+(define nonpositive-single-flonum/sc (numeric/sc Nonpositive-Single-Flonum (and/c single-flonum? nonnegative?)))
+(define nonpositive-inexact-real/sc (numeric/sc Nonpositive-Inexact-Real (and/c inexact-real? nonpositive?)))
+(define single-flonum/sc (numeric/sc Single-Flonum single-flonum?))
+(define inexact-real/sc (numeric/sc Inexact-Real inexact-real?))
+(define real-zero/sc (numeric/sc Real-Zero (and/c real? zero?)))
+(define positive-real/sc (numeric/sc Positive-Real (and/c real? positive?)))
+(define nonnegative-real/sc (numeric/sc Nonnegative-Real (and/c real? nonnegative?)))
+(define negative-real/sc (numeric/sc Negative-Real (and/c real? negative?)))
+(define nonpositive-real/sc (numeric/sc Nonpositive-Real (and/c real? nonpositive?)))
+(define real/sc (numeric/sc Real real?))
+(define exact-number/sc (numeric/sc Exact-Number (and/c number? exact?)))
 (define inexact-complex/sc
-  (flat/sc #'(flat-named-contract 'Inexact-Complex
+  (numeric/sc Inexact-Complex
                (and/c number?
                  (lambda (x)
                    (and (inexact-real? (imag-part x))
-                        (inexact-real? (real-part x))))))))
-(define number/sc (flat/sc #'(flat-named-contract 'Number number?)))
+                        (inexact-real? (real-part x)))))))
+(define number/sc (numeric/sc Number number?))
 
 
 (define (numeric-type->static-contract type)

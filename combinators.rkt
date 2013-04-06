@@ -15,6 +15,7 @@
 (struct empty-combinator simple-contract ())
 (struct identifier-combinator simple-contract ())
 (struct any-combinator simple-contract ())
+(struct parametric-combinator flat-combinator ())
 (struct or-combinator flat-combinator ())
 (struct and-combinator flat-combinator ())
 (struct list/c-combinator flat-combinator ())
@@ -23,12 +24,15 @@
 (struct vector/c-combinator chaperone-combinator ())
 (struct vectorof-combinator chaperone-combinator ())
 (struct set-combinator chaperone-combinator ())
+(struct struct-combinator chaperone-combinator ())
 (struct promise-combinator chaperone-combinator ())
 (struct syntax-combinator chaperone-combinator ())
 (struct continuation-mark-key-combinator chaperone-combinator ())
 (struct hash-combinator chaperone-combinator ())
 (struct function-combinator chaperone-combinator ())
 (struct prompt-tag-combinator chaperone-combinator ())
+(struct case->-combinator chaperone-combinator ())
+(struct arr-combinator chaperone-combinator ())
 (struct box-combinator impersonator-combinator ())
 (struct parameter-combinator impersonator-combinator ())
 (struct sequence-combinator impersonator-combinator ())
@@ -127,8 +131,37 @@
       (map second mand-kws)
       (map second opt-kws)
       (if rest (list rest) null)
-      (and range null))))
+      (or range null))))
 
-(define (case->/sc arrs)
-  (error 'nyi))
+(define case->/sc 
+  (combine* case->-combinator #'case->))
 
+(define (arr/sc mand-args rest range)
+  (define mand-args-start 0)
+  (define mand-args-end (length mand-args))
+  (define rest-start mand-args-end)
+  (define rest-end (if rest (add1 rest-start) rest-start))
+  (define range-start rest-end)
+  (define range-end (if range (+ range-start (length range)) range-start))
+  (arr-combinator
+    (lambda ctcs
+      (define mand-ctcs (drop (take ctcs mand-args-end) mand-args-start))
+      (define rest-ctc-stx
+        (if rest
+            (list '#:rest (first (drop (take ctcs rest-end) rest-start)))
+            #'()))
+      (define range-ctc
+        (if range
+            #`(values #,@(drop (take ctcs range-end) range-start))
+            #'any))
+      #`(#,@mand-ctcs #,@rest-ctc-stx . -> . #,range-ctc))
+    (append
+      mand-args
+      (if rest (list rest) null)
+      (or range null))))
+
+(define (struct/sc name fields)
+  (struct-combinator (λ ctcs #`(struct/c name #,ctcs)) fields))
+
+(define (parametric->/sc vars body)
+  (parametric-combinator (λ (ctc) #`(parametric->/c (#,@vars) #,ctc)) body))

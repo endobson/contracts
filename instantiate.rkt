@@ -7,7 +7,7 @@
   "structures.rkt"
   "equations.rkt")
 
-
+(provide instantiate)
 
 (define (instantiate sc)
   (instantiate/inner sc (compute-recursive-kinds (find-recursive sc))))
@@ -43,14 +43,13 @@
        (thunk (combine-kinds (cons 'chaperone (map (lambda (f) (f)) kinds)))))
       ((impersonator-combinator _ args)
        (thunk 'impersonator))))
-
   (for ((part parts))
     (add-equation! eqs
       (hash-ref vars (recursive-contract-name part))
       (get-kind part)))
-  (define values (resolve-equations eqs))
+  (define var-values (resolve-equations eqs))
   (for/hash (((name var) vars))
-    (values name (hash-ref values var))))
+    (values name (hash-ref var-values var))))
     
 (define (instantiate/inner sc recursive-kinds)
   (define (recur sc)
