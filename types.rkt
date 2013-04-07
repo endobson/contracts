@@ -121,6 +121,7 @@
                    (list (loop b 'both rv))
                    (recursive-contract-use both-n*))]
          [(typed untyped)
+          ;; TODO not fail in cases that don't get used
           (define untyped (loop b 'untyped rv))
           (define typed (loop b 'typed rv))
           (define both (loop b 'both rv))
