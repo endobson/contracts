@@ -138,7 +138,6 @@
       [(Class: _ (list (list by-name-inits by-name-init-tys _) ...) (list (list names functions) ...))
        (class/sc* (map list names (map t->sc/method functions))
                   (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
-      [(Value: '()) empty/sc]
       [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
        (cond
          [(assf (λ (v) (equal? v nm)) recursive-values) => second]

@@ -8,6 +8,52 @@
 
 (provide (all-defined-out))
 
+;;Printing
+(define (any-write-proc v port mode)
+  (if (equal? mode 0)
+      (display "any/sc" port)
+      (display "#<any/sc>" port)))
+
+;; Struct Definitions
+(struct any-combinator simple-contract ()
+        #:methods gen:custom-write [(define write-proc any-write-proc)])
+(struct or-combinator flat-combinator ()
+        #:property prop:combinator-name "or/sc")
+(struct and-combinator flat-combinator ()
+        #:property prop:combinator-name "and/sc")
+(struct list/c-combinator flat-combinator ()
+        #:property prop:combinator-name "list/sc")
+(struct listof-combinator flat-combinator ()
+        #:property prop:combinator-name "listof/sc")
+(struct cons-combinator flat-combinator ()
+        #:property prop:combinator-name "cons/sc")
+(struct vector/c-combinator chaperone-combinator ()
+        #:property prop:combinator-name "vector/sc")
+(struct vectorof-combinator chaperone-combinator ()
+        #:property prop:combinator-name "vectorof/sc")
+(struct set-combinator chaperone-combinator ()
+        #:property prop:combinator-name "set/sc")
+(struct promise-combinator chaperone-combinator ()
+        #:property prop:combinator-name "promise/sc")
+(struct syntax-combinator chaperone-combinator ()
+        #:property prop:combinator-name "syntax/sc")
+(struct hash-combinator chaperone-combinator ()
+        #:property prop:combinator-name "hash/sc")
+(struct box-combinator impersonator-combinator ()
+        #:property prop:combinator-name "box/sc")
+(struct parameter-combinator impersonator-combinator ()
+        #:property prop:combinator-name "parameter/sc")
+(struct sequence-combinator impersonator-combinator ()
+        #:property prop:combinator-name "sequence/sc")
+(struct struct-combinator chaperone-combinator ())
+(struct continuation-mark-key-combinator chaperone-combinator ())
+(struct prompt-tag-combinator chaperone-combinator ())
+(struct parametric-combinator flat-combinator ())
+(struct function-combinator chaperone-combinator ())
+(struct case->-combinator chaperone-combinator ())
+(struct arr-combinator chaperone-combinator ())
+
+;; Helpers
 (define ((app stx) . ctcs) #`(#,stx #,@ctcs))
 
 (define ((combine combinator stx) sc)
@@ -15,33 +61,7 @@
 (define ((combine* combinator stx) scs)
   (combinator (app stx) scs))
 
-(struct false-combinator simple-contract ())
-(struct empty-combinator simple-contract ())
-(struct identifier-combinator simple-contract ())
-(struct any-combinator simple-contract ())
-(struct parametric-combinator flat-combinator ())
-(struct or-combinator flat-combinator ())
-(struct and-combinator flat-combinator ())
-(struct list/c-combinator flat-combinator ())
-(struct listof-combinator flat-combinator ())
-(struct cons-combinator flat-combinator ())
-(struct vector/c-combinator chaperone-combinator ())
-(struct vectorof-combinator chaperone-combinator ())
-(struct set-combinator chaperone-combinator ())
-(struct struct-combinator chaperone-combinator ())
-(struct promise-combinator chaperone-combinator ())
-(struct syntax-combinator chaperone-combinator ())
-(struct continuation-mark-key-combinator chaperone-combinator ())
-(struct hash-combinator chaperone-combinator ())
-(struct function-combinator chaperone-combinator ())
-(struct prompt-tag-combinator chaperone-combinator ())
-(struct case->-combinator chaperone-combinator ())
-(struct arr-combinator chaperone-combinator ())
-(struct box-combinator impersonator-combinator ())
-(struct parameter-combinator impersonator-combinator ())
-(struct sequence-combinator impersonator-combinator ())
-
-
+;; Combinators
 (define (or/sc . scs) (or/sc* scs))
 (define (and/sc . scs) (and/sc* scs))
 (define or/sc* (combine* or-combinator #'or/c))
@@ -55,6 +75,8 @@
 (define vectorof/sc (combine* vectorof-combinator #'vectorof))
 
 (define (flat/sc ctc) (simple-contract ctc 'flat))
+(define (chaperone/sc ctc) (simple-contract ctc 'chaperone))
+(define (impersonator/sc ctc) (simple-contract ctc 'impersonator))
 
 (define sequence/sc (combine* sequence-combinator #'sequence/c))
 (define box/sc (combine box-combinator #'box/c))
@@ -88,9 +110,8 @@
 (define (class/sc* methods) (error 'nyi))
 
 
-(define empty/sc (empty-combinator #'empty? 'flat))
 (define any/sc (any-combinator #'any/c 'flat))
-(define identifier/sc (identifier-combinator #'identifier? 'flat))
+(define identifier/sc (flat/sc #'identifier?))
 
 (define (function/sc mand-args opt-args mand-kws opt-kws rest range)
   (define mand-args-start 0)
