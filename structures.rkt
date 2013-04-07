@@ -8,6 +8,7 @@
   (struct-out flat-combinator)
   (struct-out chaperone-combinator)
   (struct-out impersonator-combinator)
+  (struct-out restrict)
   (struct-out flat-restrict)
   (struct-out chaperone-restrict))
 
@@ -19,6 +20,7 @@
 (struct flat-combinator combinator ())
 (struct chaperone-combinator combinator ())
 (struct impersonator-combinator combinator ())
-(struct flat-restrict (body))
-(struct chaperone-restrict (body))
+(struct restrict (body))
+(struct flat-restrict restrict ())
+(struct chaperone-restrict restrict ())
 

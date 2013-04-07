@@ -1,7 +1,10 @@
 #lang racket/base
 
+(require racket/match)
+
 (provide
   contract-kind?
+  contract-kind<
   kind->keyword
   combine-kinds)
 
@@ -9,6 +12,14 @@
   (case v
     ((flat chaperone impersonator) #t)
     (else #f)))
+
+(define (contract-kind< v1 v2)
+  (match* (v1 v2)
+    [('flat _) #t]
+    [('chaperone 'flat) #f]
+    [('chaperone (or 'chaperone 'impersonator)) #t]
+    [('impersonator (or 'flat 'chaperone)) #f]
+    [('impersonator 'impersonator) #t]))
 
 (define combine-kinds
   (case-lambda

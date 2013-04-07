@@ -2,6 +2,10 @@
 
 (require "structures.rkt" racket/list)
 
+;; for syntax
+(require racket/set
+         (except-in racket/contract recursive-contract))
+
 (provide (all-defined-out))
 
 (define ((app stx) . ctcs) #`(#,stx #,@ctcs))

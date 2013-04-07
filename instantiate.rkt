@@ -6,6 +6,7 @@
   "kinds.rkt"
   "structures.rkt"
   "equations.rkt")
+(require (prefix-in c: racket/contract))
 
 (provide instantiate)
 
@@ -15,14 +16,15 @@
 (define (find-recursive sc)
   (define (recur sc acc)
     (match sc
-      ((simple-contract _ _) acc)
-      ((recursive-contract-use _) acc)
-      ((recursive-contract names values body)
+      [(simple-contract _ _) acc]
+      [(recursive-contract-use _) acc]
+      [(recursive-contract names values body)
        (for/fold ((acc (cons sc acc))) ((arg (cons body values)))
-         (recur arg acc)))
-      ((combinator _ args)
+         (recur arg acc))]
+      [(combinator _ args)
        (for/fold ((acc acc)) ((arg args))
-         (recur arg acc)))))
+         (recur arg acc))]
+      [(restrict body) (recur body acc)]))
   (recur sc null))
 
 (define (compute-recursive-kinds parts)
@@ -41,12 +43,27 @@
        (get-kind body)]
       [(flat-combinator _ args)
        (define kinds (map get-kind args))
-       (thunk (combine-kinds (map (lambda (f) (f)) kinds)))]
+       (thunk (apply combine-kinds (map (lambda (f) (f)) kinds)))]
       [(chaperone-combinator _ args)
        (define kinds (map get-kind args))
-       (thunk (combine-kinds (cons 'chaperone (map (lambda (f) (f)) kinds))))]
+       (thunk (apply combine-kinds (cons 'chaperone (map (lambda (f) (f)) kinds))))]
       [(impersonator-combinator _ args)
-       (thunk 'impersonator)]))
+       (thunk 'impersonator)]
+      [(flat-restrict body)
+       (define kind-thunk (get-kind body))
+       (thunk
+         (define kind (kind-thunk))
+         (unless (contract-kind< kind 'flat)
+           (error 'instantiate "Cannot convert to regular contract"))
+         kind)]
+      [(chaperone-restrict body)
+       (define kind-thunk (get-kind body))
+       (thunk
+         (define kind (kind-thunk))
+         (unless (contract-kind< kind 'chaperone)
+           (error 'instantiate "Cannot convert to regular contract"))
+         kind)]
+      ))
   (for ([part parts])
     (for ([name (recursive-contract-names part)]
           [value (recursive-contract-values part)])
@@ -65,10 +82,12 @@
       [(recursive-contract names values body)
        (define bindings
          (for/list ([name names] [value values])
-            #`[#,name (recursive-contract #,(recur value) 
-                                          #,(kind->keyword
-                                              (hash-ref recursive-kinds name)))]))
+            #`[#,name (c:recursive-contract #,(recur value) 
+                                            #,(kind->keyword
+                                                (hash-ref recursive-kinds name)))]))
        #`(letrec #,bindings #,(recur body))]
       [(combinator make-stx args)
-       (apply make-stx (map recur args))]))
+       (apply make-stx (map recur args))]
+      [(restrict body)
+       (recur body)]))
   (recur sc))
