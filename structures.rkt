@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require racket/match racket/list)
+(require racket/match racket/list racket/generic)
 
 (provide
   (struct-out simple-contract)
@@ -13,7 +13,9 @@
   (struct-out restrict)
   (struct-out flat-restrict)
   (struct-out chaperone-restrict)
-  prop:combinator-name)
+  prop:combinator-name
+  gen:sc-mapable
+  sc-map)
 
 
 (define (simple-contract-write-proc v port mode)
@@ -107,17 +109,21 @@
           v))
       v)))
 
+(define-generics sc-mapable
+  [sc-map sc-mapable f])
 
 
 
 
 (struct simple-contract (syntax kind)
+        #:methods gen:sc-mapable [(define (sc-map v f) v)]
         #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
 
 (struct recursive-contract (names values body)
         #:methods gen:custom-write [(define write-proc recursive-contract-write-proc)])
 
 (struct recursive-contract-use (name)
+        #:methods gen:sc-mapable [(define (sc-map v f) v)]
         #:methods gen:custom-write [(define write-proc recursive-contract-use-write-proc)])
 
 (struct combinator (make-syntax args)
@@ -128,7 +134,9 @@
 (struct impersonator-combinator combinator ())
 (struct restrict (body))
 (struct flat-restrict restrict ()
+        #:methods gen:sc-mapable [(define (sc-map v f) (flat-restrict (f (restrict-body v) 'covariant)))]
         #:methods gen:custom-write [(define write-proc (restrict-write-proc "flat-restrict/sc"))])
 (struct chaperone-restrict restrict ()
+        #:methods gen:sc-mapable [(define (sc-map v f) (chaperone-restrict (f (restrict-body v) 'contravariant)))]
         #:methods gen:custom-write [(define write-proc (restrict-write-proc "chaperone-restrict/sc"))])
 

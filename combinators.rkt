@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require "structures.rkt" racket/list)
+(require "structures.rkt" racket/list
+         racket/match
+         (for-syntax racket/base syntax/parse))
 
 ;; for syntax
 (require racket/set
@@ -14,44 +16,6 @@
       (display "any/sc" port)
       (display "#<any/sc>" port)))
 
-;; Struct Definitions
-(struct any-combinator simple-contract ()
-        #:methods gen:custom-write [(define write-proc any-write-proc)])
-(struct or-combinator flat-combinator ()
-        #:property prop:combinator-name "or/sc")
-(struct and-combinator flat-combinator ()
-        #:property prop:combinator-name "and/sc")
-(struct list/c-combinator flat-combinator ()
-        #:property prop:combinator-name "list/sc")
-(struct listof-combinator flat-combinator ()
-        #:property prop:combinator-name "listof/sc")
-(struct cons-combinator flat-combinator ()
-        #:property prop:combinator-name "cons/sc")
-(struct vector/c-combinator chaperone-combinator ()
-        #:property prop:combinator-name "vector/sc")
-(struct vectorof-combinator chaperone-combinator ()
-        #:property prop:combinator-name "vectorof/sc")
-(struct set-combinator chaperone-combinator ()
-        #:property prop:combinator-name "set/sc")
-(struct promise-combinator chaperone-combinator ()
-        #:property prop:combinator-name "promise/sc")
-(struct syntax-combinator chaperone-combinator ()
-        #:property prop:combinator-name "syntax/sc")
-(struct hash-combinator chaperone-combinator ()
-        #:property prop:combinator-name "hash/sc")
-(struct box-combinator impersonator-combinator ()
-        #:property prop:combinator-name "box/sc")
-(struct parameter-combinator impersonator-combinator ()
-        #:property prop:combinator-name "parameter/sc")
-(struct sequence-combinator impersonator-combinator ()
-        #:property prop:combinator-name "sequence/sc")
-(struct struct-combinator chaperone-combinator ())
-(struct continuation-mark-key-combinator chaperone-combinator ())
-(struct prompt-tag-combinator chaperone-combinator ())
-(struct parametric-combinator flat-combinator ())
-(struct function-combinator chaperone-combinator ())
-(struct case->-combinator chaperone-combinator ())
-(struct arr-combinator chaperone-combinator ())
 
 ;; Helpers
 (define ((app stx) . ctcs) #`(#,stx #,@ctcs))
@@ -61,15 +25,95 @@
 (define ((combine* combinator stx) scs)
   (combinator (app stx) scs))
 
-;; Combinators
-(define (or/sc . scs) (or/sc* scs))
-(define (and/sc . scs) (and/sc* scs))
-(define or/sc* (combine* or-combinator #'or/c))
-(define and/sc* (combine* and-combinator #'and/c))
+(define ((combinator-map* constructor) v f)
+  (match v
+    [(combinator stx args) (constructor stx (for/list ((a args))
+                                              (f a 'pos)))]))
+(define-syntax-rule (combinator-map constructor)
+  (combinator-map* (lambda (stx args) (constructor stx args))))
 
-(define (list/sc . scs) (list/sc* scs))
-(define list/sc* (combine* list/c-combinator #'list/c))
-(define listof/sc (combine listof-combinator #'listof))
+(begin-for-syntax
+  (define-splicing-syntax-class contract-form
+    [pattern (~seq #:single c:id)
+             #:attr fun #'(λ (constructor) (λ (sc) (constructor (app #'c) (list sc))))]
+    [pattern (~seq #:double c:id)
+             #:attr fun #'(λ (constructor) (λ (sc1 sc2) (constructor (app #'c) (list sc1 sc2))))]
+    [pattern (~seq #:list c:id)
+             #:attr fun #'(λ (constructor) (λ scs (constructor (app #'c) scs)))])
+
+  (define-syntax-class variance-keyword
+    #:attributes (variance)
+    [pattern (~and kw (~or #:covariant #:contravariant #:invariant))
+             #:attr variance (string->symbol (keyword->string (syntax-e (attribute kw))))])
+  (define-syntax-class contract-category-keyword
+    #:attributes (category)
+    [pattern (~and kw (~or #:flat #:chaperone #:impersonator))
+             #:attr category (string->symbol (keyword->string (syntax-e (attribute kw))))])
+
+  (define-syntax-class argument-description
+    #:attributes (variance)
+    [pattern ((~once :variance-keyword) ...)])
+
+  (define-syntax-class static-combinator-form
+    #:attributes (name)
+    [pattern (name:id pos:argument-description ... . (~or () rest:argument-description))]))
+
+(define-syntax (combinator-structs stx)
+  (syntax-parse stx
+    [(_ (struct-name:id sc:static-combinator-form c:contract-form kind:id) ...)
+     #`(begin
+         (begin
+           (struct struct-name kind ()
+                   #:methods gen:sc-mapable [(define sc-map (combinator-map struct-name))]
+                   #:property prop:combinator-name (symbol->string 'sc.name))
+           (define sc.name (c.fun struct-name))) ...)]))
+(combinator-structs
+  (or-combinator (or/sc . (#:covariant)) #:list or/c flat-combinator)
+  (and-combinator (and/sc . (#:covariant)) #:list and/c flat-combinator)
+  (list/c-combinator (list/sc . (#:covariant)) #:list list/c flat-combinator)
+  (listof-combinator (listof/sc (#:covariant)) #:single listof flat-combinator)
+  (cons-combinator (cons/sc (#:covariant) (#:covariant)) #:double cons/c flat-combinator)
+  ;; TODO add chaperone restrict
+  (set-combinator (set/sc (#:covariant)) #:single set/c flat-combinator))
+
+
+;; Struct Definitions
+(struct any-combinator simple-contract ()
+        #:methods gen:custom-write [(define write-proc any-write-proc)])
+(struct vector/c-combinator chaperone-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map vector/c-combinator))]
+        #:property prop:combinator-name "vector/sc")
+(struct vectorof-combinator chaperone-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map vectorof-combinator))]
+        #:property prop:combinator-name "vectorof/sc")
+(struct promise-combinator chaperone-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map promise-combinator))]
+        #:property prop:combinator-name "promise/sc")
+(struct syntax-combinator chaperone-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map syntax-combinator))]
+        #:property prop:combinator-name "syntax/sc")
+(struct hash-combinator chaperone-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map hash-combinator))]
+        #:property prop:combinator-name "hash/sc")
+(struct box-combinator impersonator-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map box-combinator))]
+        #:property prop:combinator-name "box/sc")
+(struct parameter-combinator impersonator-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map parameter-combinator))]
+        #:property prop:combinator-name "parameter/sc")
+(struct sequence-combinator impersonator-combinator ()
+        #:methods gen:sc-mapable [(define sc-map (combinator-map sequence-combinator))]
+        #:property prop:combinator-name "sequence/sc")
+(struct struct-combinator chaperone-combinator ())
+(struct continuation-mark-key-combinator chaperone-combinator ())
+(struct prompt-tag-combinator chaperone-combinator ())
+(struct parametric-combinator flat-combinator ())
+(struct function-combinator chaperone-combinator ())
+(struct case->-combinator chaperone-combinator ())
+(struct arr-combinator chaperone-combinator ())
+
+
+;; Combinators
 (define (vector/sc . scs) (vector/sc* scs))
 (define vector/sc* (combine* vector/c-combinator #'vector/c))
 (define vectorof/sc (combine* vectorof-combinator #'vectorof))
@@ -88,12 +132,10 @@
 (define (syntax/sc sc)
   (syntax-combinator (app #'syntax/c)
     (list (flat-restrict sc))))
-(define (set/sc sc)
-  (set-combinator (app #'set/c)
-    (list (chaperone-restrict sc))))
+(define (syntax/sc/raw sc)
+  (syntax-combinator (app #'syntax/c)
+    (list sc)))
 
-(define (cons/sc left right)
-  (cons-combinator (app #'cons/c) (list left right)))
 ;;TODO make this sound
 (define (parameter/sc in out)
   (parameter-combinator (app #'parameter/c) (list out)))
@@ -189,3 +231,55 @@
 
 (define (parametric->/sc vars body)
   (parametric-combinator (λ (ctc) #`(parametric->/c (#,@vars) #,ctc)) body))
+
+
+;; Match Expanders
+;;
+(define-syntax single-matchers
+  (syntax-parser
+    [(_ (name:id struct-name:id) ...)
+     #'(begin
+         (define-match-expander name
+           (syntax-parser
+             [(_ ctc)
+              #'(struct-name _ (list ctc))])) ...)]))
+
+(define-syntax double-matchers
+  (syntax-parser
+    [(_ (name:id struct-name:id) ...)
+     #'(begin
+         (define-match-expander name
+           (syntax-parser
+             [(_ ctc1 ctc2)
+              #'(struct-name _ (list ctc1 ctc2))])) ...)]))
+
+(define-syntax multiple-matchers
+  (syntax-parser
+    [(_ (name:id struct-name:id) ...)
+     #'(begin
+         (define-match-expander name
+           (syntax-parser
+             [(_ ctc (... ...))
+              #'(struct-name _ (list ctc (... ...)))])) ...)]))
+
+(single-matchers
+  (listof/sc: listof-combinator)
+  (vectorof/sc: vectorof-combinator)
+  (set/sc: set-combinator)
+  (box/sc: box-combinator)
+  (syntax/sc: syntax-combinator)
+  (promise/sc: promise-combinator))
+(double-matchers
+  (hash/sc: hash-combinator))
+(multiple-matchers
+  (list/sc: list-combinator)
+  (vector/sc: vector-combinator)
+  (sequence/sc: sequence-combinator))
+
+
+
+(define-match-expander any/sc:
+  (syntax-parser
+    [(_) #'(any-combinator _ _)]))
+
+
