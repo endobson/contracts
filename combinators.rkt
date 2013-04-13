@@ -48,26 +48,31 @@
                              ((impersonator) #'impersonator-combinator))])
 
   (define-syntax-class argument-description
-    #:attributes (variance)
+    #:attributes (variance name restricted-name)
     [pattern ((~or (~optional :contract-category-keyword)
-                   (~once :variance-keyword)) ...)])
+                   (~once :variance-keyword)) ...)
+             #:attr name (generate-temporary)
+             #:attr restricted-name
+               (case (attribute category)
+                 ((flat) #'(flat-restrict name))
+                 ((chaperone) #'(chaperone-restrict name))
+                 (else #'name))])
 
   (define-syntax-class static-combinator-form
-    #:attributes (name stx-maker matcher)
+    #:attributes (name combinator matcher)
     [pattern (name:id pos:argument-description ... )
-             #:with (pos-names ...) (generate-temporaries #'(pos ...))
              #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
-             #:attr stx-maker
-               #'(λ (constructor ctc) (λ (pos-names ...) (constructor (app ctc) (list pos-names ...))))
+             #:attr combinator
+               #'(λ (constructor ctc) (λ (pos.name ...) (constructor (app ctc) (list pos.restricted-name ...))))
              #:attr matcher
                (λ (struct-name)
                  #`(define-match-expander matcher-name
                      (syntax-parser
-                       [(_ pos-names ...)
-                        #'(#,struct-name _ (list pos-names ...))])))] 
+                       [(_ pos.name ...)
+                        #'(#,struct-name _ (list pos.name ...))])))]
     [pattern (name:id . rest:argument-description)
              #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
-             #:attr stx-maker
+             #:attr combinator
                #'(λ (constructor ctc) (λ args (constructor (app ctc) args)))
              #:attr matcher
                (λ (struct-name)
@@ -86,7 +91,7 @@
                  #:methods gen:sc-mapable [(define sc-map (combinator-map struct-name))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
          #,((attribute sc.matcher) #'struct-name)
-         (define sc.name (sc.stx-maker struct-name c)))]))
+         (define sc.name (sc.combinator struct-name c)))]))
 
 
 (define-syntax (combinator-structs stx)
