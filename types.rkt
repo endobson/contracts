@@ -68,24 +68,24 @@
       [(Mu: var (Union: (list (Value: '()) (Pair: elem-ty (F: var)))))
        (listof/sc (t->sc elem-ty))]
       [t (=> fail) (or (numeric-type->static-contract t) (fail))]
-      [(Base: sym cnt _ _ _)
+      [(Base: sym cnt _ _)
        (flat/sc #`(flat-named-contract '#,sym (flat-contract-predicate #,cnt)))]
-      [(Refinement: par p? cert)
-       (and/sc (t->sc par) (flat/sc (cert p?)))]
+      [(Refinement: par p?)
+       (and/sc (t->sc par) (flat/sc p?))]
       [(Union: elems)
-       (or/sc* (map t->sc elems))]
+       (apply or/sc (map t->sc elems))]
       [(and t (Function: _)) (t->sc/fun t)]
       [(Set: t) (set/sc (t->sc t))]
       [(Sequence: ts) (sequence/sc (map t->sc ts))]
       [(Vector: t) (vectorof/sc (t->sc t))]
-      [(HeterogeneousVector: ts) (vector/sc* (map t->sc ts))]
+      [(HeterogeneousVector: ts) (apply vector/sc (map t->sc ts))]
       [(Box: t) (box/sc (t->sc t))]
       [(Pair: t1 t2)
        (cons/sc (t->sc t1) (t->sc t2))]
       [(Promise: t)
        (promise/sc (t->sc t))]
-      [(Opaque: p? cert)
-       (flat/sc #`(flat-named-contract (quote #,(syntax-e p?)) #,(cert p?)))]
+      [(Opaque: p?)
+       (flat/sc #`(flat-named-contract (quote #,(syntax-e p?)) #,p?))]
       [(Continuation-Mark-Keyof: t)
        (continuation-mark-key/sc (t->sc t))]
       ;; TODO: this is not quite right for case->
@@ -153,7 +153,7 @@
               (if mut? sc (chaperone-restrict sc))))
           (recursive-contract nm* (struct/sc nm fields))]
          [else (flat/sc #`(flat-named-contract '#,(syntax-e pred?) #,pred?))])]
-      [(Syntax: (Base: 'Symbol _ _ _ _)) identifier/sc]
+      [(Syntax: (Base: 'Symbol _ _ _)) identifier/sc]
       [(Syntax: t)
        (syntax/sc (t->sc t))]
       [(Value: v)
