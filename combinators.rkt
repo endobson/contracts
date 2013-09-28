@@ -106,7 +106,6 @@
   ((list/sc . (#:covariant)) list/c #:flat)
   ((listof/sc (#:covariant)) listof #:flat)
   ((cons/sc (#:covariant) (#:covariant)) cons/c #:flat)
-  ;; TODO add chaperone restrict
   ((set/sc (#:covariant #:chaperone)) set/c #:flat)
   ((vector/sc . (#:invariant)) vector/c #:chaperone)
   ((vectorof/sc (#:invariant)) vectorof #:chaperone)
