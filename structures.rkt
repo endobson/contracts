@@ -123,7 +123,8 @@
   [sc-map sc-mapable f])
 
 
-(struct static-contract ())
+(struct static-contract ()
+        #:property prop:custom-print-quotable 'never)
 
 (struct simple-contract static-contract (syntax kind)
         #:methods gen:sc-mapable [(define (sc-map v f) v)]

@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "structures.rkt" "function-combinator.rkt"
+         "combinators/any.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
          racket/set
@@ -8,14 +9,10 @@
          (except-in racket/contract recursive-contract))
 
 (provide (all-defined-out)
-         (all-from-out "function-combinator.rkt"))
+         (all-from-out "combinators/any.rkt"
+                       "function-combinator.rkt"))
 
 
-;;Printing
-(define (any-write-proc v port mode)
-  (if (equal? mode 0)
-      (display "any/sc" port)
-      (display "#<any/sc>" port)))
 
 
 ;; Helpers
@@ -118,8 +115,6 @@
 
 
 ;; Struct Definitions
-(struct any-combinator simple-contract ()
-        #:methods gen:custom-write [(define write-proc any-write-proc)])
 (struct struct-combinator chaperone-combinator ())
 (struct continuation-mark-key-combinator chaperone-combinator ())
 (struct prompt-tag-combinator chaperone-combinator ())
@@ -146,7 +141,6 @@
 (define (class/sc* methods) (error 'nyi))
 
 
-(define any/sc (any-combinator #'any/c 'flat))
 (define identifier/sc (flat/sc #'identifier?))
 
 
@@ -184,9 +178,5 @@
 (define (parametric->/sc vars body)
   (parametric-combinator (λ (ctc) #`(parametric->/c (#,@vars) #,ctc)) body))
 
-
-(define-match-expander any/sc:
-  (syntax-parser
-    [(_) #'(any-combinator _ _)]))
 
 
