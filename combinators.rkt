@@ -1,7 +1,8 @@
 #lang racket/base
 
-(require "structures.rkt" "function-combinator.rkt"
+(require "structures.rkt"
          "combinators/any.rkt"
+         "combinators/function.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
          racket/set
@@ -10,7 +11,7 @@
 
 (provide (all-defined-out)
          (all-from-out "combinators/any.rkt"
-                       "function-combinator.rkt"))
+                       "combinators/function.rkt"))
 
 
 
