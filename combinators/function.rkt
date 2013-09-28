@@ -50,7 +50,7 @@
   (function-combinator
     (lambda ctcs
       (define-values (mand-ctcs opt-ctcs mand-kw-ctcs opt-kw-ctcs rest-ctc range-ctcs)
-        (split-function-args ctcs end-indices))
+        (apply split-function-args ctcs end-indices))
 
       (define mand-kws-stx (append-map list mand-kws mand-kw-ctcs))
       (define opt-kws-stx (append-map list opt-kws opt-kw-ctcs))
