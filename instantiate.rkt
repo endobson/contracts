@@ -3,6 +3,7 @@
 (require
   racket/function
   racket/match
+  racket/sequence
   "kinds.rkt"
   "structures.rkt"
   "equations.rkt")
@@ -87,7 +88,7 @@
                                                 (hash-ref recursive-kinds name)))]))
        #`(letrec #,bindings #,(recur body))]
       [(combinator make-stx args)
-       (apply make-stx (map recur args))]
+       (apply make-stx (sequence->list (sequence-map recur args)))]
       [(restrict body)
        (recur body)]))
   (recur sc))
