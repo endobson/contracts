@@ -11,19 +11,22 @@
                                 [values (listof static-contract?)]
                                 [body static-contract?]))
     (struct recursive-contract-use ([name identifier?]))
-    (struct combinator ([make-syntax procedure?] [args (listof static-contract?)]))
-    (struct flat-combinator ([make-syntax procedure?] [args (listof static-contract?)]))
-    (struct chaperone-combinator ([make-syntax procedure?] [args (listof static-contract?)]))
-    (struct impersonator-combinator ([make-syntax procedure?] [args (listof static-contract?)]))
+    (struct combinator ([args (listof static-contract?)]))
+    (struct flat-combinator ([args (listof static-contract?)]))
+    (struct chaperone-combinator ([args (listof static-contract?)]))
+    (struct impersonator-combinator ([args (listof static-contract?)]))
     (struct restrict ([body static-contract?]))
     (struct flat-restrict ([body static-contract?]))
     (struct chaperone-restrict ([body static-contract?]))
     [sc-map (static-contract? (static-contract? variance/c . -> . static-contract?) . -> . static-contract?)]
+    [sc->contract (static-contract? (static-contract? . -> . syntax?) . -> . syntax?)]
     [static-contract? predicate/c]
+    [sc-contract? predicate/c]
     )
 
 
   prop:combinator-name
+  gen:sc-contract
   gen:sc-mapable)
 
 (define variance/c (or/c 'covariant 'contravariant 'invariant))
@@ -71,7 +74,7 @@
   (display (syntax->datum (recursive-contract-use-name v)) port))
 
 (define (combinator-write-proc v port mode)
-  (match-define (combinator _ args) v)
+  (match-define (combinator args) v)
   (define name (combinator-name v))
   (define recur
     (case mode
@@ -122,6 +125,9 @@
 (define-generics sc-mapable
   [sc-map sc-mapable f])
 
+(define-generics sc-contract
+  [sc->contract sc-contract f])
+
 
 (struct static-contract ()
         #:property prop:custom-print-quotable 'never)
@@ -137,7 +143,7 @@
         #:methods gen:sc-mapable [(define (sc-map v f) v)]
         #:methods gen:custom-write [(define write-proc recursive-contract-use-write-proc)])
 
-(struct combinator static-contract (make-syntax args)
+(struct combinator static-contract (args)
         #:property prop:combinator-name "combinator/sc"
         #:methods gen:custom-write [(define write-proc combinator-write-proc)])
 (struct flat-combinator combinator ())

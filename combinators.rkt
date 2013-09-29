@@ -16,20 +16,10 @@
 
 
 
-;; Helpers
-(define ((app stx) . ctcs) #`(#,stx #,@ctcs))
-
-(define ((combine combinator stx) sc)
-  (combinator (app stx) (list sc)))
-(define ((combine* combinator stx) scs)
-  (combinator (app stx) scs))
-
-(define ((combinator-map* constructor) v f)
+(define ((combinator-map constructor) v f)
   (match v
-    [(combinator stx args) (constructor stx (for/list ((a args))
-                                              (f a 'covariant)))]))
-(define-syntax-rule (combinator-map constructor)
-  (combinator-map* (lambda (stx args) (constructor stx args))))
+    [(combinator args) (constructor (for/list ((a args))
+                                      (f a 'covariant)))]))
 
 (begin-for-syntax
   (define-syntax-class variance-keyword
@@ -57,21 +47,24 @@
                  (else #'name))])
 
   (define-syntax-class static-combinator-form
-    #:attributes (name combinator matcher)
+    #:attributes (name combinator combinator2 matcher)
     [pattern (name:id pos:argument-description ... )
              #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
              #:attr combinator
-               #'(λ (constructor ctc) (λ (pos.name ...) (constructor (app ctc) (list pos.restricted-name ...))))
+               #'(λ (constructor) (λ (pos.name ...) (constructor (list pos.restricted-name ...))))
+             #:attr combinator2
+               #'(λ (constructor) (λ (pos.name ...) (constructor (list pos.name ...))))
              #:attr matcher
                (λ (struct-name)
                  #`(define-match-expander matcher-name
                      (syntax-parser
                        [(_ pos.name ...)
-                        #'(#,struct-name _ (list pos.name ...))])))]
+                        #'(#,struct-name (list pos.name ...))])))]
     [pattern (name:id . rest:argument-description)
              #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
              #:attr combinator
-               #'(λ (constructor ctc) (λ args (constructor (app ctc) args)))
+               #'(λ (constructor) (λ args (constructor args)))
+             #:attr combinator2 #'combinator
              #:attr matcher
                (λ (struct-name)
                  #`(define-match-expander matcher-name
@@ -80,16 +73,25 @@
                        #'(#,struct-name _ (list ctc (... ...)))])))]))
 
 
+(define (make-combinator c)
+  (lambda (args) #`(#,c #,@args)))
 
 (define-syntax (combinator-struct stx)
   (syntax-parse stx
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
+     (define/with-syntax struct-name (generate-temporary #'sc.name))
      #`(begin
          (struct struct-name kind.struct ()
-                 #:methods gen:sc-mapable [(define sc-map (combinator-map struct-name))]
+                 #:methods gen:sc-mapable [(define sc-map (combinator-map (lambda (args) (struct-name args))))]
+                 #:methods gen:sc-contract [(define (sc->contract v recur)
+                                              (match v
+                                                [(combinator args)
+                                                 (apply
+                                                  (sc.combinator2 (make-combinator #'c))
+                                                  (map recur args))]))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
          #,((attribute sc.matcher) #'struct-name)
-         (define sc.name (sc.combinator struct-name c)))]))
+         (define sc.name (sc.combinator struct-name)))]))
 
 
 (define-syntax (combinator-structs stx)
@@ -129,8 +131,8 @@
 (define (chaperone/sc ctc) (simple-contract ctc 'chaperone))
 (define (impersonator/sc ctc) (simple-contract ctc 'impersonator))
 
-(define continuation-mark-key/sc
-  (combine continuation-mark-key-combinator #'continuation-mark-key/c))
+
+(define continuation-mark-key/sc (lambda (sc) (error 'nyi)))
 
 (define (prompt-tag/sc* scs call/cc-sc)
   (prompt-tag-combinator
@@ -146,8 +148,7 @@
 
 
 
-(define case->/sc 
-  (combine* case->-combinator #'case->))
+(define case->/sc  (lambda (sc) (error 'nyi)))
 
 (define (arr/sc mand-args rest range)
   (define mand-args-start 0)

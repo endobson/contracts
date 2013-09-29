@@ -22,7 +22,7 @@
       [(recursive-contract names values body)
        (for/fold ((acc (cons sc acc))) ((arg (cons body values)))
          (recur arg acc))]
-      [(combinator _ args)
+      [(combinator args)
        (for/fold ((acc acc)) ((arg args))
          (recur arg acc))]
       [(restrict body) (recur body acc)]))
@@ -42,13 +42,13 @@
        (thunk (variable-ref (hash-ref vars name)))]
       [(recursive-contract names values body)
        (get-kind body)]
-      [(flat-combinator _ args)
+      [(flat-combinator args)
        (define kinds (map get-kind args))
        (thunk (apply combine-kinds (map (lambda (f) (f)) kinds)))]
-      [(chaperone-combinator _ args)
+      [(chaperone-combinator args)
        (define kinds (map get-kind args))
        (thunk (apply combine-kinds (cons 'chaperone (map (lambda (f) (f)) kinds))))]
-      [(impersonator-combinator _ args)
+      [(impersonator-combinator args)
        (thunk 'impersonator)]
       [(flat-restrict body)
        (define kind-thunk (get-kind body))
@@ -87,8 +87,8 @@
                                             #,(kind->keyword
                                                 (hash-ref recursive-kinds name)))]))
        #`(letrec #,bindings #,(recur body))]
-      [(combinator make-stx args)
-       (apply make-stx (sequence->list (sequence-map recur args)))]
+      [(? sc-contract? sc)
+       (sc->contract sc recur)]
       [(restrict body)
        (recur body)]))
   (recur sc))
