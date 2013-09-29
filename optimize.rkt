@@ -71,46 +71,46 @@
 
 (module+ test
   (require rackunit)
+  (provide optimizer-tests)
   (define-simple-check (check-optimize variance argument expected)
     (equal? (optimize argument variance) expected))
-  (check-optimize 'covariant
-    (listof/sc any/sc)
-    any/sc)
-  (check-optimize 'contravariant
-    (listof/sc any/sc)
-    list?/sc)
-  (check-optimize 'covariant
-    (set/sc any/sc)
-    any/sc)
-  (check-optimize 'contravariant
-    (set/sc any/sc)
-    set?/sc)
-  (check-optimize 'covariant
-    (function/sc (list (listof/sc any/sc))
-                 (list)
-                 (list)
-                 (list)
-                 #f
-                 (list (listof/sc any/sc)))
-    (function/sc (list list?/sc)
-                 (list)
-                 (list)
-                 (list)
-                 #f
-                 #f))
-  (check-optimize 'contravariant
-    (function/sc (list (listof/sc any/sc))
-                 (list)
-                 (list)
-                 (list)
-                 #f
-                 (list (listof/sc any/sc)))
-    (function/sc (list any/sc)
-                 (list)
-                 (list)
-                 (list)
-                 #f
-                 (list list?/sc)))
-
-  )
-
+  (define optimizer-tests
+    (test-suite "Optimizer Tests"
+      (check-optimize 'covariant
+        (listof/sc any/sc)
+        any/sc)
+      (check-optimize 'contravariant
+        (listof/sc any/sc)
+        list?/sc)
+      (check-optimize 'covariant
+        (set/sc any/sc)
+        any/sc)
+      (check-optimize 'contravariant
+        (set/sc any/sc)
+        set?/sc)
+      (check-optimize 'covariant
+        (function/sc (list (listof/sc any/sc))
+                     (list)
+                     (list)
+                     (list)
+                     #f
+                     (list (listof/sc any/sc)))
+        (function/sc (list list?/sc)
+                     (list)
+                     (list)
+                     (list)
+                     #f
+                     #f))
+      (check-optimize 'contravariant
+        (function/sc (list (listof/sc any/sc))
+                     (list)
+                     (list)
+                     (list)
+                     #f
+                     (list (listof/sc any/sc)))
+        (function/sc (list any/sc)
+                     (list)
+                     (list)
+                     (list)
+                     #f
+                     (list list?/sc))))))

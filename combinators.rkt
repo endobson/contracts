@@ -26,6 +26,7 @@
     #:attributes (variance)
     [pattern (~and kw (~or #:covariant #:contravariant #:invariant))
              #:attr variance (string->symbol (keyword->string (syntax-e (attribute kw))))])
+
   (define-syntax-class contract-category-keyword
     #:attributes (category struct)
     [pattern (~and kw (~or #:flat #:chaperone #:impersonator))
@@ -47,8 +48,9 @@
                  (else #'name))])
 
   (define-syntax-class static-combinator-form
-    #:attributes (name combinator combinator2 matcher)
+    #:attributes (name struct-name combinator combinator2 matcher)
     [pattern (name:id pos:argument-description ... )
+             #:with struct-name (generate-temporary #'name)
              #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
              #:attr combinator
                #'(λ (constructor) (λ (pos.name ...) (constructor (list pos.restricted-name ...))))
@@ -61,6 +63,7 @@
                        [(_ pos.name ...)
                         #'(#,struct-name (list pos.name ...))])))]
     [pattern (name:id . rest:argument-description)
+             #:with struct-name (generate-temporary #'name)
              #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
              #:attr combinator
                #'(λ (constructor) (λ args (constructor args)))
@@ -79,10 +82,9 @@
 (define-syntax (combinator-struct stx)
   (syntax-parse stx
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
-     (define/with-syntax struct-name (generate-temporary #'sc.name))
      #`(begin
-         (struct struct-name kind.struct ()
-                 #:methods gen:sc-mapable [(define sc-map (combinator-map (lambda (args) (struct-name args))))]
+         (struct sc.struct-name kind.struct ()
+                 #:methods gen:sc-mapable [(define sc-map (combinator-map (lambda (args) (sc.struct-name args))))]
                  #:methods gen:sc-contract [(define (sc->contract v recur)
                                               (match v
                                                 [(combinator args)
@@ -90,8 +92,8 @@
                                                   (sc.combinator2 (make-combinator #'c))
                                                   (map recur args))]))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
-         #,((attribute sc.matcher) #'struct-name)
-         (define sc.name (sc.combinator struct-name)))]))
+         #,((attribute sc.matcher) #'sc.struct-name)
+         (define sc.name (sc.combinator sc.struct-name)))]))
 
 
 (define-syntax (combinator-structs stx)

@@ -40,7 +40,12 @@
               ))
 
 
+(require (submod "optimize.rkt" test))
+(define all-tests
+  (test-suite "All Tests"
+    contract-tests
+    optimizer-tests))
 
 (require rackunit/text-ui)
-(void (run-tests contract-tests))
+(void (run-tests all-tests))
 
