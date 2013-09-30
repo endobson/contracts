@@ -129,6 +129,7 @@
   [sc->contract sc-contract f])
 
 
+
 (struct static-contract ()
         #:property prop:custom-print-quotable 'never)
 
@@ -137,6 +138,7 @@
 
 (struct recursive-contract-use static-contract (name)
         #:methods gen:sc-mapable [(define (sc-map v f) v)]
+        #:methods gen:sc-contract [(define (sc->contract v f) (recursive-contract-use-name v))]
         #:methods gen:custom-write [(define write-proc recursive-contract-use-write-proc)])
 
 (struct combinator static-contract (args)
@@ -147,10 +149,12 @@
 (struct impersonator-combinator combinator ())
 (struct simple-contract combinator (syntax kind)
         #:methods gen:sc-mapable [(define (sc-map v f) v)]
+        #:methods gen:sc-contract [(define (sc->contract v f) (simple-contract-syntax v))]
         #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
 
 
-(struct restrict static-contract (body))
+(struct restrict static-contract (body)
+        #:methods gen:sc-contract [(define (sc->contract v f) (f (restrict-body v)))])
 (struct flat-restrict restrict ()
         #:methods gen:sc-mapable [(define (sc-map v f) (flat-restrict (f (restrict-body v) 'covariant)))]
         #:methods gen:custom-write [(define write-proc (restrict-write-proc "flat-restrict/sc"))])

@@ -77,8 +77,6 @@
 (define (instantiate/inner sc recursive-kinds)
   (define (recur sc)
     (match sc
-      [(simple-contract _ stx _) stx]
-      [(recursive-contract-use stx) stx]
       [(recursive-contract names values body)
        (define bindings
          (for/list ([name names] [value values])
@@ -87,7 +85,5 @@
                                                 (hash-ref recursive-kinds name)))]))
        #`(letrec #,bindings #,(recur body))]
       [(? sc-contract? sc)
-       (sc->contract sc recur)]
-      [(restrict body)
-       (recur body)]))
+       (sc->contract sc recur)]))
   (recur sc))
