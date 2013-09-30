@@ -22,7 +22,7 @@
 
 (define-match-expander any/sc:
   (syntax-parser
-    [(_) #'(any-combinator _ _)]))
+    [(_) #'(any-combinator _ _ _)]))
 
-(define any/sc (any-combinator #'any/c 'flat))
+(define any/sc (any-combinator null #'any/c 'flat))
 

@@ -6,7 +6,7 @@
 
 (provide
   (contract-out
-    (struct simple-contract ([syntax syntax?] [kind contract-kind?]))
+    (struct simple-contract ([args empty?] [syntax syntax?] [kind contract-kind?]))
     (struct recursive-contract ([names (listof identifier?)]
                                 [values (listof static-contract?)]
                                 [body static-contract?]))
@@ -32,7 +32,7 @@
 (define variance/c (or/c 'covariant 'contravariant 'invariant))
 
 (define (simple-contract-write-proc v port mode)
-  (match-define (simple-contract syntax kind) v)
+  (match-define (simple-contract _ syntax kind) v)
   (define-values (open close)
     (if (equal? mode 0)
         (values "(" ")")
@@ -132,10 +132,6 @@
 (struct static-contract ()
         #:property prop:custom-print-quotable 'never)
 
-(struct simple-contract static-contract (syntax kind)
-        #:methods gen:sc-mapable [(define (sc-map v f) v)]
-        #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
-
 (struct recursive-contract static-contract (names values body)
         #:methods gen:custom-write [(define write-proc recursive-contract-write-proc)])
 
@@ -149,6 +145,11 @@
 (struct flat-combinator combinator ())
 (struct chaperone-combinator combinator ())
 (struct impersonator-combinator combinator ())
+(struct simple-contract combinator (syntax kind)
+        #:methods gen:sc-mapable [(define (sc-map v f) v)]
+        #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
+
+
 (struct restrict static-contract (body))
 (struct flat-restrict restrict ()
         #:methods gen:sc-mapable [(define (sc-map v f) (flat-restrict (f (restrict-body v) 'covariant)))]

@@ -122,9 +122,9 @@
 
 
 ;; Combinators
-(define (flat/sc ctc) (simple-contract ctc 'flat))
-(define (chaperone/sc ctc) (simple-contract ctc 'chaperone))
-(define (impersonator/sc ctc) (simple-contract ctc 'impersonator))
+(define (flat/sc ctc) (simple-contract null ctc 'flat))
+(define (chaperone/sc ctc) (simple-contract null ctc 'chaperone))
+(define (impersonator/sc ctc) (simple-contract null ctc 'impersonator))
 
 
 (define continuation-mark-key/sc (lambda (sc) (error 'nyi)))

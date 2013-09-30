@@ -17,7 +17,6 @@
 (define (find-recursive sc)
   (define (recur sc acc)
     (match sc
-      [(simple-contract _ _) acc]
       [(recursive-contract-use _) acc]
       [(recursive-contract names values body)
        (for/fold ((acc (cons sc acc))) ((arg (cons body values)))
@@ -37,7 +36,7 @@
               (add-variable! eqs 'flat))))
   (define (get-kind sc)
     (match sc
-      [(simple-contract _ kind) (thunk kind)]
+      [(simple-contract _ _ kind) (thunk kind)]
       [(recursive-contract-use name)
        (thunk (variable-ref (hash-ref vars name)))]
       [(recursive-contract names values body)
@@ -78,7 +77,7 @@
 (define (instantiate/inner sc recursive-kinds)
   (define (recur sc)
     (match sc
-      [(simple-contract stx _) stx]
+      [(simple-contract _ stx _) stx]
       [(recursive-contract-use stx) stx]
       [(recursive-contract names values body)
        (define bindings

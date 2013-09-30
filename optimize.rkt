@@ -34,11 +34,11 @@
 
 (define (flat-reduce sc)
   (match sc
-    [(simple-contract stx 'flat)
+    [(simple-contract _ stx 'flat)
      any/sc]
-    [(flat-restrict (simple-contract stx 'flat))
+    [(flat-restrict (simple-contract _ stx 'flat))
      any/sc]
-    [(chaperone-restrict (simple-contract stx 'flat))
+    [(chaperone-restrict (simple-contract _ stx 'flat))
      any/sc]
     [sc sc]))
 

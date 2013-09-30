@@ -1,6 +1,7 @@
 #lang racket
 
 (require
+ "combinators.rkt"
  typed-racket/utils/utils
  syntax/parse
  (rep type-rep filter-rep object-rep)
@@ -20,7 +21,7 @@
 
 (provide type->static-contract)
 
-(define any-wrap/sc (simple-contract #'any-wrap/c 'impersonator))
+(define any-wrap/sc (impersonator/sc #'any-wrap/c))
 
 (define (no-duplicates l)
   (= (length l) (length (remove-duplicates l))))
