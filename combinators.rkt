@@ -16,10 +16,6 @@
 
 
 
-(define ((combinator-map constructor) v f)
-  (match v
-    [(combinator args) (constructor (for/list ((a args))
-                                      (f a 'covariant)))]))
 
 (begin-for-syntax
   (define-syntax-class variance-keyword
@@ -48,32 +44,29 @@
                  (else #'name))])
 
   (define-syntax-class static-combinator-form
-    #:attributes (name struct-name combinator combinator2 matcher)
+    #:attributes (name struct-name definition combinator2 matcher)
     [pattern (name:id pos:argument-description ... )
              #:with struct-name (generate-temporary #'name)
-             #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
-             #:attr combinator
-               #'(λ (constructor) (λ (pos.name ...) (constructor (list pos.restricted-name ...))))
+             #:with matcher-name (format-id #'name "~a:" #'name)
+             #:with definition
+               #'(define name (λ (pos.name ...) (struct-name (list pos.restricted-name ...))))
              #:attr combinator2
                #'(λ (constructor) (λ (pos.name ...) (constructor (list pos.name ...))))
-             #:attr matcher
-               (λ (struct-name)
-                 #`(define-match-expander matcher-name
-                     (syntax-parser
-                       [(_ pos.name ...)
-                        #'(#,struct-name (list pos.name ...))])))]
+             #:with matcher
+               #'(define-match-expander matcher-name
+                   (syntax-parser
+                     [(_ pos.name ...)
+                      #'(struct-name (list pos.name ...))]))]
     [pattern (name:id . rest:argument-description)
              #:with struct-name (generate-temporary #'name)
-             #:with matcher-name (format-id #'name "~a:" (syntax-e #'name))
-             #:attr combinator
-               #'(λ (constructor) (λ args (constructor args)))
-             #:attr combinator2 #'combinator
-             #:attr matcher
-               (λ (struct-name)
-                 #`(define-match-expander matcher-name
-                     (syntax-parser
-                      [(_ ctc (... ...))
-                       #'(#,struct-name _ (list ctc (... ...)))])))]))
+             #:with matcher-name (format-id #'name "~a:" #'name)
+             #:with definition #'(define name #'(λ args (struct-name args)))
+             #:attr combinator2 #'(λ args (struct-name args))
+             #:with matcher
+               #'(define-match-expander matcher-name
+                   (syntax-parser
+                    [(_ ctc (... ...))
+                     #'(struct-name _ (list ctc (... ...)))]))]))
 
 
 (define (make-combinator c)
@@ -84,16 +77,19 @@
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
      #`(begin
          (struct sc.struct-name kind.struct ()
-                 #:methods gen:sc-mapable [(define sc-map (combinator-map (lambda (args) (sc.struct-name args))))]
-                 #:methods gen:sc-contract [(define (sc->contract v recur)
-                                              (match v
-                                                [(combinator args)
-                                                 (apply
-                                                  (sc.combinator2 (make-combinator #'c))
-                                                  (map recur args))]))]
+                 #:methods gen:sc-mapable
+                   [(define (sc-map v f)
+                      (sc.struct-name
+                        (for/list ((a (combinator-args v)))
+                          (f a 'covariant))))]
+                 #:methods gen:sc-contract
+                   [(define (sc->contract v recur)
+                      (apply
+                        (sc.combinator2 (make-combinator #'c))
+                        (map recur (combinator-args v))))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
-         #,((attribute sc.matcher) #'sc.struct-name)
-         (define sc.name (sc.combinator sc.struct-name)))]))
+         sc.matcher
+         sc.definition)]))
 
 
 (define-syntax (combinator-structs stx)
