@@ -69,13 +69,10 @@
                      #'(struct-name _ (list ctc (... ...)))]))]))
 
 
-(define (make-combinator c)
-  (lambda (args) #`(#,c #,@args)))
-
 (define-syntax (combinator-struct stx)
   (syntax-parse stx
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
-     #`(begin
+     #'(begin
          (struct sc.struct-name kind.struct ()
                  #:methods gen:sc-mapable
                    [(define (sc-map v f)
@@ -85,7 +82,7 @@
                  #:methods gen:sc-contract
                    [(define (sc->contract v recur)
                       (apply
-                        (sc.combinator2 (make-combinator #'c))
+                        (sc.combinator2 (lambda (args) #`(c #,@args)))
                         (map recur (combinator-args v))))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
          sc.matcher
