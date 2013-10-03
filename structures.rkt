@@ -2,7 +2,7 @@
 
 (require racket/match racket/list racket/generic 
          (except-in racket/contract recursive-contract)
-         "kinds.rkt")
+         "kinds.rkt" "constraints.rkt")
 
 (provide
   (contract-out
@@ -128,6 +128,8 @@
 (define-generics sc-contract
   [sc->contract sc-contract f])
 
+(define-generics sc-constraints
+  [sc->constraints sc-constraints f])
 
 
 (struct static-contract ()
@@ -150,6 +152,7 @@
 (struct simple-contract combinator (syntax kind)
         #:methods gen:sc-mapable [(define (sc-map v f) v)]
         #:methods gen:sc-contract [(define (sc->contract v f) (simple-contract-syntax v))]
+        #:methods gen:sc-constraints [(define (sc->kind v f) (simple-contract-restrict (simple-contract-kind v)))]
         #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
 
 
