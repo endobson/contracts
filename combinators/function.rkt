@@ -1,7 +1,8 @@
 #lang racket/base
 
 
-(require "../structures.rkt" racket/list racket/match
+(require "../structures.rkt" "../constraints.rkt"
+         racket/list racket/match
          (except-in racket/contract recursive-contract)
          (for-syntax racket/base racket/syntax syntax/parse))
 
@@ -23,7 +24,8 @@
         #:methods gen:equal+hash [(define (equal-proc a b recur) (function-sc-equal? a b recur))
                                   (define (hash-proc v recur) (function-sc-hash v recur))
                                   (define (hash2-proc v recur) (function-sc-hash2 v recur))]
-        #:methods gen:sc-mapable [(define (sc-map v f) (function-sc-map v f))])
+        #:methods gen:sc-mapable [(define (sc-map v f) (function-sc-map v f))]
+        #:methods gen:sc-constraints [(define (sc->constraints v f) (function-sc-constraints v f))])
 
 (define (split-function-args ctcs mand-args-end opt-args-end
                     mand-kw-args-end opt-kw-args-end rest-end range-end)
@@ -118,6 +120,10 @@
         
 
   (function-combinator new-args indices mand-kws opt-kws))
+
+(define (function-sc-constraints v f)
+  (match-define (function-combinator args indices mand-kws opt-kws) v) 
+  (merge-restricts* 'chaperone (map f args)))
 
 (define (function-sc-equal? a b recur)
   (match-define (function-combinator a-args a-indices a-mand-kws a-opt-kws) a) 

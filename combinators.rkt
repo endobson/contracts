@@ -87,8 +87,8 @@
                         (sc.combinator2 (lambda (args) #`(c #,@args)))
                         (map recur (combinator-args v))))]
                  #:methods gen:sc-constraints
-                   [(define (sc->constraint v recur)
-                      (merge-restricts
+                   [(define (sc->constraints v recur)
+                      (merge-restricts*
                         'kind.category-stx
                         (map recur (combinator-args v))))]
                  #:property prop:combinator-name (symbol->string 'sc.name))

@@ -9,9 +9,14 @@
 
 (provide
   simple-contract-restrict
+  variable-contract-restrict
+  merge-restricts*
   merge-restricts
+  add-constraint
+  close-loop
   
   
+  contract-restrict?
   )
 
 
@@ -20,6 +25,7 @@
 (struct contract-restrict (value constraints))
 
 (define (simple-contract-restrict kind) (contract-restrict (kind-max empty kind) empty))
+(define (variable-contract-restrict var) (contract-restrict (kind-max (list var) 'flat) empty))
 
 
 (define (add-constraint cr max) 
@@ -56,10 +62,12 @@
         (match cr
           [(contract-restrict (kind-max ids max) _)
            (define-values (bound-ids unbound-ids)
-             (partition ids (lambda (id) (member id names))))
+             (partition (lambda (id) (member id names)) ids))
            (merge-kind-maxes 'flat (list*
                                      (kind-max unbound-ids max)
                                      (map lookup-id (cons name bound-ids))))]))))
+  (void)
+  #;#;
 
   (define var-values (resolve-equations eqs))
   (for/hash (((name var) vars))

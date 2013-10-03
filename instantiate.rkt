@@ -6,6 +6,7 @@
   racket/sequence
   "kinds.rkt"
   "structures.rkt"
+  "constraints.rkt"
   "equations.rkt")
 (require (prefix-in c: racket/contract))
 
@@ -14,7 +15,22 @@
 
 
 (define (instantiate sc)
+  (compute-constraints sc)
   (instantiate/inner sc (compute-recursive-kinds (find-recursive sc))))
+
+(define (compute-constraints sc)
+  (define (recur sc)
+    (match sc
+      [(recursive-contract-use var)
+       (variable-contract-restrict var)]
+      [(recursive-contract names values body)
+       (close-loop names (map recur values))
+       (recur body)]
+      [(? sc-constraints?)
+       (sc->constraints sc recur)]))
+  (recur sc))
+
+
 
 (define (find-recursive sc)
   (define (recur sc acc)
@@ -28,6 +44,7 @@
          (recur arg acc))]
       [(restrict body) (recur body acc)]))
   (recur sc null))
+
 
 (define (compute-recursive-kinds parts)
   (define eqs (make-equation-set))

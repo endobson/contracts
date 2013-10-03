@@ -20,8 +20,10 @@
     (struct chaperone-restrict ([body static-contract?]))
     [sc-map (static-contract? (static-contract? variance/c . -> . static-contract?) . -> . static-contract?)]
     [sc->contract (static-contract? (static-contract? . -> . syntax?) . -> . syntax?)]
+    [sc->constraints (static-contract? (static-contract? . -> . contract-restrict?) . -> . contract-restrict?)]
     [static-contract? predicate/c]
     [sc-contract? predicate/c]
+    [sc-constraints? predicate/c]
     )
 
 
@@ -153,7 +155,7 @@
 (struct simple-contract combinator (syntax kind)
         #:methods gen:sc-mapable [(define (sc-map v f) v)]
         #:methods gen:sc-contract [(define (sc->contract v f) (simple-contract-syntax v))]
-        #:methods gen:sc-constraints [(define (sc->kind v f) (simple-contract-restrict (simple-contract-kind v)))]
+        #:methods gen:sc-constraints [(define (sc->constraints v f) (simple-contract-restrict (simple-contract-kind v)))]
         #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
 
 
@@ -161,8 +163,12 @@
         #:methods gen:sc-contract [(define (sc->contract v f) (f (restrict-body v)))])
 (struct flat-restrict restrict ()
         #:methods gen:sc-mapable [(define (sc-map v f) (flat-restrict (f (restrict-body v) 'covariant)))]
+        #:methods gen:sc-constraints
+          [(define (sc->constraints v f) (add-constraint (f (restrict-body v)) 'flat))]
         #:methods gen:custom-write [(define write-proc (restrict-write-proc "flat-restrict/sc"))])
 (struct chaperone-restrict restrict ()
         #:methods gen:sc-mapable [(define (sc-map v f) (chaperone-restrict (f (restrict-body v) 'covariant)))]
+        #:methods gen:sc-constraints
+          [(define (sc->constraints v f) (add-constraint (f (restrict-body v)) 'chaperone))]
         #:methods gen:custom-write [(define write-proc (restrict-write-proc "chaperone-restrict/sc"))])
 
