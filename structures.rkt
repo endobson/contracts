@@ -27,7 +27,8 @@
 
   prop:combinator-name
   gen:sc-contract
-  gen:sc-mapable)
+  gen:sc-mapable
+  gen:sc-constraints)
 
 (define variance/c (or/c 'covariant 'contravariant 'invariant))
 

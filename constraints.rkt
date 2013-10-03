@@ -9,6 +9,7 @@
 
 (provide
   simple-contract-restrict
+  merge-restricts
   
   
   )

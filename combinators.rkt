@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "structures.rkt"
+         "constraints.rkt"
          "combinators/any.rkt"
          "combinators/function.rkt"
          racket/list racket/match
@@ -24,9 +25,10 @@
              #:attr variance (string->symbol (keyword->string (syntax-e (attribute kw))))])
 
   (define-syntax-class contract-category-keyword
-    #:attributes (category struct)
+    #:attributes (category category-stx struct)
     [pattern (~and kw (~or #:flat #:chaperone #:impersonator))
-             #:attr category (string->symbol (keyword->string (syntax-e (attribute kw))))
+             #:with category-stx (string->symbol (keyword->string (syntax-e (attribute kw))))
+             #:attr category (syntax-e #'category-stx)
              #:attr struct (case (attribute category)
                              ((flat) #'flat-combinator)
                              ((chaperone) #'chaperone-combinator)
@@ -83,6 +85,11 @@
                    [(define (sc->contract v recur)
                       (apply
                         (sc.combinator2 (lambda (args) #`(c #,@args)))
+                        (map recur (combinator-args v))))]
+                 #:methods gen:sc-constraints
+                   [(define (sc->constraint v recur)
+                      (merge-restricts
+                        'kind.category-stx
                         (map recur (combinator-args v))))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
          sc.matcher
