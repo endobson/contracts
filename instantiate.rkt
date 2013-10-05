@@ -21,8 +21,6 @@
 (define (compute-constraints sc)
   (define (recur sc)
     (match sc
-      [(recursive-contract-use var)
-       (variable-contract-restrict var)]
       [(recursive-contract names values body)
        (close-loop names (map recur values) (recur body)) ]
       [(? sc-constraints?)

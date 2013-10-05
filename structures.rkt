@@ -107,6 +107,8 @@
 (struct recursive-contract-use static-contract (name)
         #:methods gen:sc-mapable [(define (sc-map v f) v)]
         #:methods gen:sc-contract [(define (sc->contract v f) (recursive-contract-use-name v))]
+        #:methods gen:sc-constraints
+          [(define (sc->constraints v f) (variable-contract-restrict (recursive-contract-use-name v)))]
         #:methods gen:custom-write [(define write-proc recursive-contract-use-write-proc)])
 
 (struct combinator static-contract (args)
