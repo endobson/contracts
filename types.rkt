@@ -12,14 +12,16 @@
  (prefix-in t: (types abbrev numeric-tower))
  (private parse-type)
  racket/match unstable/match syntax/struct syntax/stx racket/syntax racket/list
- (only-in racket/contract -> ->* case-> cons/c flat-rec-contract provide/contract any/c)
+ (only-in racket/contract -> ->* case-> cons/c flat-rec-contract contract-out any/c)
  (for-template racket/base racket/contract racket/set (utils any-wrap)
                (prefix-in t: (types numeric-predicates))
                (only-in unstable/contract sequence/c)))
 
 (require "structures.rkt" "combinators.rkt")
 
-(provide type->static-contract)
+(provide
+  (contract-out
+    [type->static-contract (Type/c (-> any/c) . -> . static-contract?)]))
 
 (define any-wrap/sc (chaperone/sc #'any-wrap/c))
 
