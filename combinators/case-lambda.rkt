@@ -20,13 +20,53 @@
 (define (arr/sc args rest range)
   (arr-combinator (arr-seq args rest range)))
 
-(struct case-combinator combinator ())
-(struct arr-combinator combinator ())
+(struct case-combinator combinator ()
+  #:property prop:combinator-name "case->/sc"
+  #:methods gen:sc
+    [(define (sc-map v f)
+       (case-combinator (map f (combinator-args v))))
+     (define (sc->contract v f)
+       #`(case-> #,@(map f (combinator-args v))))
+     (define (sc->constraints v f)
+       (merge-restricts* 'chaperone (map f (combinator-args v))))])
+(struct arr-combinator combinator ()
+  #:property prop:combinator-name "arr/sc"
+  #:methods gen:sc
+    [(define (sc-map v f)
+       (arr-combinator (arr-seq-map f (combinator-args v))))
+     (define (sc->contract v f)
+       (match v
+        [(arr-combinator (arr-seq args rest range))
+         (with-syntax ([(arg-stx ...) (map f args)]
+                       [(rest-stx ...) (if rest #`(#:rest #,(f rest)) #'())]
+                       [range-stx (if range #`(values #,@(map f range)) #'any)])
+           #'(arg-stx ... rest-stx ... . -> . range-stx))]))
+     (define (sc->constraints v f)
+       (merge-restricts* 'chaperone (map f (arr-seq->list (combinator-args v)))))])
+
+(define (arr-seq-map f seq)
+  (match seq
+    [(arr-seq args rest range)
+     (arr-seq
+       (map f seq)
+       (and rest (f rest))
+       (and range (map f range)))]))
+
+(define (arr-seq->list seq)
+  (match seq
+    [(arr-seq args rest range)
+     (append
+       args
+       (if rest (list rest) empty)
+       (or range empty))]))
+
+
+
 (struct arr-seq (args rest range)
-        #:property prop:sequence
-          (match-lambda 
-            [(arr-seq args rest range)
-             (append
-               args
-               (if rest (list rest) empty)
-               (if range range empty))]))
+   #:property prop:sequence
+     (match-lambda
+       [(arr-seq args rest range)
+        (append
+          args
+          (if rest (list rest) empty)
+          (if range range empty))]))

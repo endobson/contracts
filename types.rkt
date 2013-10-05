@@ -172,7 +172,7 @@
   (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
     (loop t (flip-side typed-side) recursive-values))
   (match f
-    [(Function: (list (top-arr:))) #'(case->)]
+    [(Function: (list (top-arr:))) (case->/sc empty)]
     [(Function: arrs)
      ;; Try to generate a single `->*' contract if possible.
      ;; This allows contracts to be generated for functions with both optional and keyword args.
@@ -231,15 +231,17 @@
              [(arr: dom (Values: (list (Result: rngs _ _) ...)) rst #f kws)
               (let-values ([(mand-kws opt-kws) (partition-kws kws)])
                 ;; Garr, I hate case->!
-                (when (and (pair? opt-kws) case->)
+                (when (and (not (empty? kws)) case->)
                   (exit (fail)))
-                (function/sc
-                  (map t->sc/neg dom)
-                  null
-                  (map conv mand-kws)
-                  (map conv opt-kws)
-                  (and rst (t->sc/neg rst))
-                  (map t->sc rngs)))]))
+                (if case->
+                  (arr/sc (map t->sc/neg dom) (and rst (t->sc/neg rst)) (map t->sc rngs))
+                  (function/sc
+                    (map t->sc/neg dom)
+                    null
+                    (map conv mand-kws)
+                    (map conv opt-kws)
+                    (and rst (t->sc/neg rst))
+                    (map t->sc rngs))))]))
          (match a
            ;; functions with no filters or objects
            [(arr: dom (Values: (list (Result: rngs (FilterSet: (Top:) (Top:)) (Empty:)) ...)) rst #f kws)

@@ -30,8 +30,10 @@
 (define contract-tests
   (test-suite "Contract Tests"
               (t/sc (-Number . -> . -Number))
-              (t/sc (cl->* (-> -Number)
-                           (-Number . -> . -Number)))
+              (t/sc (cl->* (-> -Symbol)
+                           (-Symbol . -> . -Symbol)))
+              (t/sc (cl->* (-> -Symbol)
+                           (-Symbol -Symbol . -> . -Symbol)))
               (t/sc (-Promise -Number))
               (t/sc (-lst -Symbol))
               (t/sc Univ)

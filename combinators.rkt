@@ -5,6 +5,7 @@
          "combinators/any.rkt"
          "combinators/function.rkt"
          "combinators/simple.rkt"
+         "combinators/case-lambda.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
          racket/set
@@ -13,6 +14,7 @@
 
 (provide (all-defined-out)
          (all-from-out "combinators/any.rkt"
+                       "combinators/case-lambda.rkt"
                        "combinators/simple.rkt"
                        "combinators/function.rkt"))
 
@@ -146,33 +148,6 @@
 
 (define identifier/sc (flat/sc #'identifier?))
 
-
-
-(define case->/sc  (lambda (sc) (error 'nyi)))
-
-(define (arr/sc mand-args rest range)
-  (define mand-args-start 0)
-  (define mand-args-end (length mand-args))
-  (define rest-start mand-args-end)
-  (define rest-end (if rest (add1 rest-start) rest-start))
-  (define range-start rest-end)
-  (define range-end (if range (+ range-start (length range)) range-start))
-  (arr-combinator
-    (lambda ctcs
-      (define mand-ctcs (drop (take ctcs mand-args-end) mand-args-start))
-      (define rest-ctc-stx
-        (if rest
-            (list '#:rest (first (drop (take ctcs rest-end) rest-start)))
-            #'()))
-      (define range-ctc
-        (if range
-            #`(values #,@(drop (take ctcs range-end) range-start))
-            #'any))
-      #`(#,@mand-ctcs #,@rest-ctc-stx . -> . #,range-ctc))
-    (append
-      mand-args
-      (if rest (list rest) null)
-      (or range null))))
 
 ;; TODO implement chaperone restricts for mutable fields
 (define (struct/sc name mut fields)

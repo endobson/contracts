@@ -10,7 +10,7 @@
                                 [values (listof static-contract?)]
                                 [body static-contract?]))
     (struct recursive-contract-use ([name identifier?]))
-    (struct combinator ([args (listof static-contract?)]))
+    (struct combinator ([args sequence?]))
     [sc-map (static-contract? (static-contract? variance/c . -> . static-contract?) . -> . static-contract?)]
     [sc->contract (static-contract? (static-contract? . -> . syntax?) . -> . syntax?)]
     [sc->constraints (static-contract? (static-contract? . -> . contract-restrict?) . -> . contract-restrict?)]
