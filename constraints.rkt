@@ -67,9 +67,11 @@
 
 
 (define (add-constraint cr max) 
-  (match cr
-    [(contract-restrict v rec constraints)
-     (contract-restrict v rec (set-add constraints (constraint v max)))]))
+  (if (equal? 'impersonator max)
+      cr
+      (match cr
+        [(contract-restrict v rec constraints)
+         (contract-restrict v rec (set-add constraints (constraint v max)))])))
 
 (define (add-recursive-values cr dict) 
   (match cr

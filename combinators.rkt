@@ -27,31 +27,34 @@
   (define-syntax-class contract-category-keyword
     #:attributes (category category-stx struct)
     [pattern (~and kw (~or #:flat #:chaperone #:impersonator))
-             #:with category-stx (string->symbol (keyword->string (syntax-e (attribute kw))))
-             #:attr category (syntax-e #'category-stx)
+             #:attr category (string->symbol (keyword->string (syntax-e (attribute kw))))
+             #:with category-stx (attribute category)
              #:attr struct (case (attribute category)
                              ((flat) #'flat-combinator)
                              ((chaperone) #'chaperone-combinator)
                              ((impersonator) #'impersonator-combinator))])
 
+  ;; TODO: Fix category when syntax parse is fixed
   (define-syntax-class argument-description
-    #:attributes (variance name restricted-name)
-    [pattern ((~or (~optional :contract-category-keyword)
+    #:attributes (variance name category category-stx)
+    [pattern ((~or (~optional c:contract-category-keyword)
                    (~once :variance-keyword)) ...)
              #:attr name (generate-temporary)
-             #:attr restricted-name
-               (case (attribute category)
-                 ((flat) #'(flat-restrict name))
-                 ((chaperone) #'(chaperone-restrict name))
-                 (else #'name))])
+             #:attr category (or (attribute c.category) 'impersonator)
+             #:with category-stx (attribute category)])
 
   (define-syntax-class static-combinator-form
-    #:attributes (name struct-name definition combinator2 matcher)
+    #:attributes (name struct-name definition combinator2 ->restricts matcher)
     [pattern (name:id pos:argument-description ... )
              #:with struct-name (generate-temporary #'name)
              #:with matcher-name (format-id #'name "~a:" #'name)
              #:with definition
-               #'(define name (λ (pos.name ...) (struct-name (list pos.restricted-name ...))))
+               #'(define name (λ (pos.name ...) (struct-name (list pos.name ...))))
+             #:with ->restricts
+               #'(lambda (v recur)
+                   (for/list ([arg (in-list (combinator-args v))]
+                              [kind (in-list (list 'pos.category-stx ...))])
+                     (add-constraint (recur arg) kind)))
              #:attr combinator2
                #'(λ (constructor) (λ (pos.name ...) (constructor (list pos.name ...))))
              #:with matcher
@@ -64,6 +67,11 @@
              #:with matcher-name (format-id #'name "~a:" #'name)
              #:with definition #'(define name #'(λ args (struct-name args)))
              #:attr combinator2 #'(λ args (struct-name args))
+             #:with ->restricts
+               #'(lambda (v recur)
+                   (for/list ([arg (in-list (combinator-args v))]
+                              [kind (in-value 'pos.category)])
+                     (add-constraint (recur arg) kind)))
              #:with matcher
                #'(define-match-expander matcher-name
                    (syntax-parser
@@ -88,9 +96,7 @@
                         (map recur (combinator-args v))))]
                  #:methods gen:sc-constraints
                    [(define (sc->constraints v recur)
-                      (merge-restricts*
-                        'kind.category-stx
-                        (map recur (combinator-args v))))]
+                      (merge-restricts* 'kind.category-stx (sc.->restricts v recur)))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
          sc.matcher
          sc.definition)]))
