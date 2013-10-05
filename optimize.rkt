@@ -19,7 +19,6 @@
 
 (define (any/sc-reduce sc)
   (match sc
-    [(restrict (any/sc:)) any/sc]
     [(listof/sc: (any/sc:)) list?/sc]
     [(vectorof/sc: (any/sc:)) vector?/sc]
     [(set/sc: (any/sc:)) set?/sc]
@@ -35,10 +34,6 @@
 (define (flat-reduce sc)
   (match sc
     [(simple-contract _ stx 'flat)
-     any/sc]
-    [(flat-restrict (simple-contract _ stx 'flat))
-     any/sc]
-    [(chaperone-restrict (simple-contract _ stx 'flat))
      any/sc]
     [sc sc]))
 
