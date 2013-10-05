@@ -15,15 +15,12 @@
     [sc->contract (static-contract? (static-contract? . -> . syntax?) . -> . syntax?)]
     [sc->constraints (static-contract? (static-contract? . -> . contract-restrict?) . -> . contract-restrict?)]
     [static-contract? predicate/c]
-    [sc-contract? predicate/c]
-    [sc-constraints? predicate/c]
+    [sc? predicate/c]
     )
 
 
   prop:combinator-name
-  gen:sc-contract
-  gen:sc-mapable
-  gen:sc-constraints)
+  gen:sc)
 
 (define variance/c (or/c 'covariant 'contravariant 'invariant))
 
@@ -88,14 +85,10 @@
           v))
       v)))
 
-(define-generics sc-mapable
-  [sc-map sc-mapable f])
-
-(define-generics sc-contract
-  [sc->contract sc-contract f])
-
-(define-generics sc-constraints
-  [sc->constraints sc-constraints f])
+(define-generics sc
+  [sc-map sc f]
+  [sc->contract sc f]
+  [sc->constraints sc f])
 
 
 (struct static-contract ()
@@ -105,10 +98,10 @@
         #:methods gen:custom-write [(define write-proc recursive-contract-write-proc)])
 
 (struct recursive-contract-use static-contract (name)
-        #:methods gen:sc-mapable [(define (sc-map v f) v)]
-        #:methods gen:sc-contract [(define (sc->contract v f) (recursive-contract-use-name v))]
-        #:methods gen:sc-constraints
-          [(define (sc->constraints v f) (variable-contract-restrict (recursive-contract-use-name v)))]
+        #:methods gen:sc
+          [(define (sc-map v f) v)
+           (define (sc->contract v f) (recursive-contract-use-name v))
+           (define (sc->constraints v f) (variable-contract-restrict (recursive-contract-use-name v)))]
         #:methods gen:custom-write [(define write-proc recursive-contract-use-write-proc)])
 
 (struct combinator static-contract (args)

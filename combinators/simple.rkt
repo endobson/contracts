@@ -30,9 +30,10 @@
 
 
 (struct simple-contract combinator (syntax kind)
-        #:methods gen:sc-mapable [(define (sc-map v f) v)]
-        #:methods gen:sc-contract [(define (sc->contract v f) (simple-contract-syntax v))]
-        #:methods gen:sc-constraints [(define (sc->constraints v f) (simple-contract-restrict (simple-contract-kind v)))]
+        #:methods gen:sc
+         [(define (sc-map v f) v)
+          (define (sc->contract v f) (simple-contract-syntax v))
+          (define (sc->constraints v f) (simple-contract-restrict (simple-contract-kind v)))]
         #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])
 
 (define (flat/sc ctc) (simple-contract null ctc 'flat))

@@ -82,18 +82,16 @@
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
      #'(begin
          (struct sc.struct-name combinator ()
-                 #:methods gen:sc-mapable
+                 #:methods gen:sc
                    [(define (sc-map v f)
                       (sc.struct-name
                         (for/list ((a (combinator-args v)))
-                          (f a 'covariant))))]
-                 #:methods gen:sc-contract
-                   [(define (sc->contract v recur)
+                          (f a 'covariant))))
+                    (define (sc->contract v recur)
                       (apply
                         (sc.combinator2 (lambda (args) #`(c #,@args)))
-                        (map recur (combinator-args v))))]
-                 #:methods gen:sc-constraints
-                   [(define (sc->constraints v recur)
+                        (map recur (combinator-args v))))
+                    (define (sc->constraints v recur)
                       (merge-restricts* 'kind.category-stx (sc.->restricts v recur)))]
                  #:property prop:combinator-name (symbol->string 'sc.name))
          sc.matcher

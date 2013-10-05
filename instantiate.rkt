@@ -23,7 +23,7 @@
     (match sc
       [(recursive-contract names values body)
        (close-loop names (map recur values) (recur body)) ]
-      [(? sc-constraints?)
+      [(? sc?)
        (sc->constraints sc recur)]))
   (define constraints (recur sc))
   (validate-constraints constraints)
@@ -61,6 +61,6 @@
                                             #,(kind->keyword
                                                 (hash-ref recursive-kinds name)))]))
        #`(letrec #,bindings #,(recur body))]
-      [(? sc-contract? sc)
+      [(? sc? sc)
        (sc->contract sc recur)]))
   (recur sc))

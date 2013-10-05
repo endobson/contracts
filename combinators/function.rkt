@@ -20,12 +20,13 @@
 
 (struct function-combinator combinator (indices mand-kws opt-kws)
         #:property prop:combinator-name "->/sc"
-        #:methods gen:sc-contract [(define (sc->contract v f) (function-sc->contract v f))]
         #:methods gen:equal+hash [(define (equal-proc a b recur) (function-sc-equal? a b recur))
                                   (define (hash-proc v recur) (function-sc-hash v recur))
                                   (define (hash2-proc v recur) (function-sc-hash2 v recur))]
-        #:methods gen:sc-mapable [(define (sc-map v f) (function-sc-map v f))]
-        #:methods gen:sc-constraints [(define (sc->constraints v f) (function-sc-constraints v f))])
+        #:methods gen:sc
+          [(define (sc->contract v f) (function-sc->contract v f))
+           (define (sc-map v f) (function-sc-map v f))
+           (define (sc->constraints v f) (function-sc-constraints v f))])
 
 (define (split-function-args ctcs mand-args-end opt-args-end
                     mand-kw-args-end opt-kw-args-end rest-end range-end)

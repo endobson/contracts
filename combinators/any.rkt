@@ -18,9 +18,10 @@
       (display "#<any/sc>" port)))
 
 (struct any-combinator combinator ()
-        #:methods gen:sc-mapable [(define (sc-map v f) v)]
-        #:methods gen:sc-contract [(define (sc->contract v f) #'any/c)]
-        #:methods gen:sc-constraints [(define (sc->constraints v f) (simple-contract-restrict 'flat))]
+        #:methods gen:sc
+          [(define (sc-map v f) v)
+           (define (sc->contract v f) #'any/c)
+           (define (sc->constraints v f) (simple-contract-restrict 'flat))]
         #:methods gen:custom-write [(define write-proc any-write-proc)])
 
 (define-match-expander any/sc:
