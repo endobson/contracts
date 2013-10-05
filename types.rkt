@@ -147,12 +147,10 @@
           (define nm* (generate-temporary #'n*))
           (define fields
             (for/list ([fty flds] [mut? mut?])
-              (define sc
-                (t->sc fty #:recursive-values (hash-set
-                                                recursive-values
-                                                nm (recursive-contract-use nm*))))
-              (if mut? sc (chaperone-restrict sc))))
-          (recursive-contract nm* (struct/sc nm fields))]
+              (t->sc fty #:recursive-values (hash-set
+                                              recursive-values
+                                              nm (recursive-contract-use nm*)))))
+          (recursive-contract nm* (struct/sc nm mut? fields))]
          [else (flat/sc #`(flat-named-contract '#,(syntax-e pred?) #,pred?))])]
       [(Syntax: (Base: 'Symbol _ _ _)) identifier/sc]
       [(Syntax: t)

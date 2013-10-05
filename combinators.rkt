@@ -182,7 +182,8 @@
       (if rest (list rest) null)
       (or range null))))
 
-(define (struct/sc name fields)
+;; TODO implement chaperone restricts for mutable fields
+(define (struct/sc name mut fields)
   (struct-combinator (λ ctcs #`(struct/c name #,ctcs)) fields))
 
 (define (parametric->/sc vars body)
