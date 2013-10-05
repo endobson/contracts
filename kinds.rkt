@@ -1,19 +1,21 @@
 #lang racket/base
 
-(require racket/match)
+(require racket/match racket/contract)
 
 (provide
-  contract-kind?
-  contract-kind<
-  kind->keyword
-  combine-kinds)
+  (contract-out
+    [contract-kind? predicate/c]
+    [contract-kind<= (contract-kind? contract-kind? . -> . boolean?)]
+    [kind->keyword (contract-kind? . -> . keyword?)]
+    [combine-kinds ((contract-kind?) #:rest (listof contract-kind?) . ->* . contract-kind?)]))
 
 (define (contract-kind? v)
   (case v
     ((flat chaperone impersonator) #t)
     (else #f)))
 
-(define (contract-kind< v1 v2)
+
+(define (contract-kind<= v1 v2)
   (match* (v1 v2)
     [('flat _) #t]
     [('chaperone 'flat) #f]
@@ -25,14 +27,7 @@
   (case-lambda
     ((v) v)
     ((v1 v2 . vs)
-     (define combined
-       (cond
-         ((impersonator? v1) v1)
-         ((impersonator? v2) v2)
-         ((chaperone? v1) v1)
-         ((chaperone? v2) v2)
-         (else 'flat)))
-          
+     (define combined (if (contract-kind<= v1 v2) v2 v1))
      (apply combine-kinds combined vs))))
 
 (define (kind->keyword kind)

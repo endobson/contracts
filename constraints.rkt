@@ -3,6 +3,7 @@
 (require
   racket/match
   racket/list
+  racket/contract
   racket/dict
   racket/set
   syntax/id-table
@@ -16,7 +17,8 @@
   merge-restricts
   add-constraint
   close-loop
-  
+  (contract-out
+    [validate-constraints (contract-restrict? . -> . void?)])
   
   contract-restrict?
   )
@@ -59,7 +61,7 @@
     [(contract-restrict v constraints)
      (contract-restrict v (set-add constraints (constraint v max)))]))
 
-(define (merge-restricts* min  crs)
+(define (merge-restricts* min crs)
   (apply merge-restricts min crs))
 
 (define (merge-restricts min . crs)
@@ -72,26 +74,46 @@
     [(list (kind-max variables maxes) ...)
      (kind-max (free-id-set-union variables) (apply combine-kinds min-kind maxes))]))
 
-(define (close-loop names crs)
+(define (close-loop names crs body)
   (define eqs (make-equation-set))
   (define vars
     (for*/hash ((name (in-list names)))
       (values name 
-              (add-variable! eqs (kind-max (free-id-set) 'flat)))))
-  (define (lookup-id name)
+              (add-variable! eqs (simple-contract-restrict 'flat)))))
+  (define (variable-lookup name)
     (variable-ref (hash-ref vars name)))
+
+
+  (define (instantiate-cr cr lookup-id)
+    (match cr
+      [(contract-restrict (kind-max ids max) constraints)
+       (define-values (bound-ids unbound-ids)
+         (partition (lambda (id) (member id names)) (dict-keys ids)))
+       (merge-restricts* 'flat (cons
+                                 (contract-restrict
+                                   (kind-max (apply free-id-set unbound-ids) max) 
+                                   constraints)
+                                 (map lookup-id bound-ids)))]))
 
   (for ([name names] [cr crs])
     (add-equation! eqs
       (hash-ref vars name)
       (lambda ()
-        (match cr
-          [(contract-restrict (kind-max ids max) _)
-           (define-values (bound-ids unbound-ids)
-             (partition (lambda (id) (member id names)) (dict-keys ids)))
-           (merge-kind-maxes 'flat (list*
-                                     (kind-max (apply free-id-set unbound-ids) max)
-                                     (map lookup-id (cons name bound-ids))))]))))
+        (instantiate-cr cr variable-lookup))))
+
   (define var-values (resolve-equations eqs))
-  (for/hash (((name var) vars))
-    (values name (hash-ref var-values var))))
+  (define id-values
+    (for/hash (((name var) vars))
+      (values name (hash-ref var-values var))))
+  (instantiate-cr body (lambda (id) (hash-ref id-values id))))
+
+
+(define (validate-constraints cr)
+  (match cr
+    [(contract-restrict (kind-max (app dict-count 0) _) constraints)
+     (for ([const (in-set constraints)])
+       (match const
+        [(constraint (kind-max (app dict-count 0) kind) bound)
+         (unless (contract-kind<= kind bound)
+           (error 'validate-constraints "Violated constraint ~a" cr))]))]))
+

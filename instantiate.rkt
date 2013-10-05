@@ -24,11 +24,11 @@
       [(recursive-contract-use var)
        (variable-contract-restrict var)]
       [(recursive-contract names values body)
-       (close-loop names (map recur values))
-       (recur body)]
+       (close-loop names (map recur values) (recur body)) ]
       [(? sc-constraints?)
        (sc->constraints sc recur)]))
-  (recur sc))
+  (define constraints (recur sc))
+  (validate-constraints constraints))
 
 
 
@@ -72,14 +72,14 @@
        (define kind-thunk (get-kind body))
        (thunk
          (define kind (kind-thunk))
-         (unless (contract-kind< kind 'flat)
+         (unless (contract-kind<= kind 'flat)
            (error 'instantiate "Cannot convert to regular contract"))
          kind)]
       [(chaperone-restrict body)
        (define kind-thunk (get-kind body))
        (thunk
          (define kind (kind-thunk))
-         (unless (contract-kind< kind 'chaperone)
+         (unless (contract-kind<= kind 'chaperone)
            (error 'instantiate "Cannot convert to regular contract"))
          kind)]
       ))

@@ -21,7 +21,7 @@
 
 (provide type->static-contract)
 
-(define any-wrap/sc (impersonator/sc #'any-wrap/c))
+(define any-wrap/sc (chaperone/sc #'any-wrap/c))
 
 (define (no-duplicates l)
   (= (length l) (length (remove-duplicates l))))
