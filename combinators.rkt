@@ -9,6 +9,7 @@
          "combinators/case-lambda.rkt"
          "combinators/struct.rkt"
          "combinators/parametric.rkt"
+         "combinators/derived.rkt"
          "combinators/object.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
@@ -24,6 +25,7 @@
                        "combinators/parametric.rkt"
                        "combinators/struct.rkt"
                        "combinators/object.rkt"
+                       "combinators/derived.rkt"
                        "combinators/function.rkt"))
 
 
@@ -134,4 +136,3 @@
 
 
 
-(define identifier/sc (flat/sc #'identifier?))

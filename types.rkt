@@ -154,7 +154,7 @@
                                               nm (recursive-contract-use nm*)))))
           (recursive-contract nm* (struct/sc nm mut? fields))]
          [else (flat/sc #`(flat-named-contract '#,(syntax-e pred?) #,pred?))])]
-      [(Syntax: (Base: 'Symbol _ _ _)) identifier/sc]
+      [(Syntax: (Base: 'Symbol _ _ _)) identifier?/sc]
       [(Syntax: t)
        (syntax/sc (t->sc t))]
       [(Value: v)

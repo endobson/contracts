@@ -8,13 +8,6 @@
 
 (provide optimize)
 
-(define list?/sc (flat/sc #'list?))
-(define set?/sc (flat/sc #'set?))
-(define box?/sc (flat/sc #'box?))
-(define vector?/sc (flat/sc #'box?))
-(define syntax?/sc (flat/sc #'syntax?))
-(define promise?/sc (flat/sc #'promise?))
-(define hash?/sc (flat/sc #'hash?))
 
 (define (any/sc-reduce sc)
   (match sc
