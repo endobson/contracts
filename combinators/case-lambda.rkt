@@ -3,7 +3,8 @@
 (require "../structures.rkt" "../constraints.rkt"
          racket/list racket/match
          unstable/contract
-         (except-in racket/contract recursive-contract))
+         (except-in racket/contract recursive-contract)
+         (for-syntax racket/base syntax/parse))
 
 (provide
   (contract-out
@@ -11,7 +12,9 @@
     [arr/sc (-> (listof static-contract?)
                 (maybe/c static-contract?)
                 (maybe/c (listof static-contract?))
-                static-contract?)]))
+                static-contract?)])
+  case->/sc:
+  arr/sc:)
 
 
 (define (case->/sc arrs)
@@ -46,6 +49,17 @@
      (define (sc->constraints v f)
        (merge-restricts* 'chaperone (map f (arr-seq->list (combinator-args v)))))])
 
+(define-match-expander case->/sc:
+  (syntax-parser
+    [(_ args ...)
+     #'(case->/combinator (list args ...))]))
+
+(define-match-expander arr/sc:
+  (syntax-parser
+    [(_ args rest range)
+     #'(arr-combinator (arr-seq args rest range))]))
+
+
 (define (arr-seq-sc-map f seq)
   (match seq
     [(arr-seq args rest range)
@@ -61,7 +75,6 @@
        args
        (if rest (list rest) empty)
        (or range empty))]))
-
 
 
 (struct arr-seq (args rest range)

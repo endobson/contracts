@@ -33,6 +33,8 @@
   (match sc
     [(->/sc: mand-args opt-args mand-kw-args opt-kw-args rest-arg (list (any/sc:) ...))
      (function/sc mand-args opt-args mand-kw-args opt-kw-args rest-arg #f)]
+    [(arr/sc: args rest (list (any/sc:) ...))
+     (arr/sc args rest #f)]
     [else sc]))
 
 (define (flat-reduce sc)
@@ -146,6 +148,9 @@
       (check-optimize 'contravariant
         (case->/sc empty)
         (case->/sc empty))
+      (check-optimize 'contravariant
+        (case->/sc (list (arr/sc (list (listof/sc any/sc)) (listof/sc (set/sc any/sc)) (list (listof/sc any/sc)))))
+        (case->/sc (list (arr/sc (list any/sc) any/sc (list list?/sc)))))
       (check-optimize 'covariant
         (case->/sc (list (arr/sc (list (listof/sc any/sc)) (listof/sc (set/sc any/sc)) (list (listof/sc any/sc)))))
-        (case->/sc (list (arr/sc (list list?/sc) (listof/sc set?/sc) (list any/sc))))))))
+        (case->/sc (list (arr/sc (list list?/sc) (listof/sc set?/sc) #f)))))))
