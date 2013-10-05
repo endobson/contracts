@@ -7,6 +7,7 @@
          "combinators/simple.rkt"
          "combinators/control.rkt"
          "combinators/case-lambda.rkt"
+         "combinators/parametric.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
          racket/set
@@ -18,6 +19,7 @@
                        "combinators/case-lambda.rkt"
                        "combinators/simple.rkt"
                        "combinators/control.rkt"
+                       "combinators/parametric.rkt"
                        "combinators/function.rkt"))
 
 
@@ -129,7 +131,6 @@
 
 ;; Struct Definitions
 (struct struct-combinator combinator ())
-(struct parametric-combinator combinator ())
 
 
 
@@ -143,9 +144,6 @@
 ;; TODO implement chaperone restricts for mutable fields
 (define (struct/sc name mut fields)
   (struct-combinator (λ ctcs #`(struct/c name #,ctcs)) fields))
-
-(define (parametric->/sc vars body)
-  (parametric-combinator (λ (ctc) #`(parametric->/c (#,@vars) #,ctc)) body))
 
 
 
