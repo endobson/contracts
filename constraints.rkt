@@ -19,7 +19,8 @@
   close-loop
   (contract-out
     [validate-constraints (contract-restrict? . -> . void?)])
-  
+  contract-restrict-recursive-values
+
   contract-restrict?
   )
 
@@ -32,12 +33,15 @@
     (contract-out
       [struct constraint ([value kind-max?] [max contract-kind?])]
       [struct kind-max ([variables free-id-table?] [max contract-kind?])]
-      [struct contract-restrict ([value kind-max?] [constraints (set/c constraint?)])]))
+      [struct contract-restrict ([value kind-max?]
+                                 [recursive-values free-id-table?]
+                                 [constraints (set/c constraint?)])]))
 
   (struct constraint (value max) #:transparent)
   (struct kind-max (variables max) #:transparent)
-  (struct contract-restrict (value constraints) #:transparent))
+  (struct contract-restrict (value recursive-values constraints) #:transparent))
 (require 'structs)
+(provide (struct-out kind-max))
 
 (define (free-id-set . elems)
   (for/fold ([table (make-immutable-free-id-table)])
@@ -50,24 +54,37 @@
               [(k _) (in-dict new-table)])
     (dict-set table k #t)))
 
+(define (free-id-table-union tables)
+  (for*/fold ([table (make-immutable-free-id-table)])
+             ([new-table (in-list tables)]
+              [(k v) (in-dict new-table)])
+    (dict-set table k v)))
+
 (define (simple-contract-restrict kind)
-  (contract-restrict (kind-max (free-id-set) kind) (set)))
+  (contract-restrict (kind-max (free-id-set) kind) (make-immutable-free-id-table) (set)))
 (define (variable-contract-restrict var)
-  (contract-restrict (kind-max (free-id-set var) 'flat) (set)))
+  (contract-restrict (kind-max (free-id-set var) 'flat) (make-immutable-free-id-table) (set)))
 
 
 (define (add-constraint cr max) 
   (match cr
-    [(contract-restrict v constraints)
-     (contract-restrict v (set-add constraints (constraint v max)))]))
+    [(contract-restrict v rec constraints)
+     (contract-restrict v rec (set-add constraints (constraint v max)))]))
+
+(define (add-recursive-values cr dict) 
+  (match cr
+    [(contract-restrict v rec constraints)
+     (contract-restrict v (free-id-table-union (list rec dict)) constraints)]))
 
 (define (merge-restricts* min crs)
   (apply merge-restricts min crs))
 
 (define (merge-restricts min . crs)
   (match crs
-    [(list (contract-restrict vs constraints) ...)
-     (contract-restrict (merge-kind-maxes min vs) (apply set-union (set) constraints))]))
+    [(list (contract-restrict vs rec constraints) ...)
+     (contract-restrict (merge-kind-maxes min vs)
+                        (free-id-table-union rec)
+                        (apply set-union (set) constraints))]))
 
 (define (merge-kind-maxes min-kind vs)
   (match vs
@@ -86,12 +103,13 @@
 
   (define (instantiate-cr cr lookup-id)
     (match cr
-      [(contract-restrict (kind-max ids max) constraints)
+      [(contract-restrict (kind-max ids max) rec constraints)
        (define-values (bound-ids unbound-ids)
          (partition (lambda (id) (member id names)) (dict-keys ids)))
        (merge-restricts* 'flat (cons
                                  (contract-restrict
                                    (kind-max (apply free-id-set unbound-ids) max) 
+                                   rec
                                    constraints)
                                  (map lookup-id bound-ids)))]))
 
@@ -105,12 +123,16 @@
   (define id-values
     (for/hash (((name var) vars))
       (values name (hash-ref var-values var))))
-  (instantiate-cr body (lambda (id) (hash-ref id-values id))))
+  (add-recursive-values
+    (instantiate-cr body (lambda (id) (hash-ref id-values id)))
+    (for/hash (((name value) id-values))
+      (values name (contract-restrict-value value)))))
+
 
 
 (define (validate-constraints cr)
   (match cr
-    [(contract-restrict (kind-max (app dict-count 0) _) constraints)
+    [(contract-restrict (kind-max (app dict-count 0) _) rec constraints)
      (for ([const (in-set constraints)])
        (match const
         [(constraint (kind-max (app dict-count 0) kind) bound)
