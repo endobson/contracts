@@ -27,14 +27,10 @@
              #:attr variance (string->symbol (keyword->string (syntax-e (attribute kw))))])
 
   (define-syntax-class contract-category-keyword
-    #:attributes (category category-stx struct)
+    #:attributes (category category-stx)
     [pattern (~and kw (~or #:flat #:chaperone #:impersonator))
              #:attr category (string->symbol (keyword->string (syntax-e (attribute kw))))
-             #:with category-stx (attribute category)
-             #:attr struct (case (attribute category)
-                             ((flat) #'flat-combinator)
-                             ((chaperone) #'chaperone-combinator)
-                             ((impersonator) #'impersonator-combinator))])
+             #:with category-stx (attribute category)])
 
   ;; TODO: Fix category when syntax parse is fixed
   (define-syntax-class argument-description
@@ -85,7 +81,7 @@
   (syntax-parse stx
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
      #'(begin
-         (struct sc.struct-name kind.struct ()
+         (struct sc.struct-name combinator ()
                  #:methods gen:sc-mapable
                    [(define (sc-map v f)
                       (sc.struct-name
@@ -128,12 +124,12 @@
 
 
 ;; Struct Definitions
-(struct struct-combinator chaperone-combinator ())
-(struct continuation-mark-key-combinator chaperone-combinator ())
-(struct prompt-tag-combinator chaperone-combinator ())
-(struct parametric-combinator flat-combinator ())
-(struct case->-combinator chaperone-combinator ())
-(struct arr-combinator chaperone-combinator ())
+(struct struct-combinator combinator ())
+(struct continuation-mark-key-combinator combinator ())
+(struct prompt-tag-combinator combinator ())
+(struct parametric-combinator combinator ())
+(struct case->-combinator combinator ())
+(struct arr-combinator combinator ())
 
 
 ;; Combinators

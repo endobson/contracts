@@ -18,7 +18,7 @@
   ->/sc:)
 
 
-(struct function-combinator chaperone-combinator (indices mand-kws opt-kws)
+(struct function-combinator combinator (indices mand-kws opt-kws)
         #:property prop:combinator-name "->/sc"
         #:methods gen:sc-contract [(define (sc->contract v f) (function-sc->contract v f))]
         #:methods gen:equal+hash [(define (equal-proc a b recur) (function-sc-equal? a b recur))

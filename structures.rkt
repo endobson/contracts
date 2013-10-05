@@ -11,9 +11,6 @@
                                 [body static-contract?]))
     (struct recursive-contract-use ([name identifier?]))
     (struct combinator ([args (listof static-contract?)]))
-    (struct flat-combinator ([args (listof static-contract?)]))
-    (struct chaperone-combinator ([args (listof static-contract?)]))
-    (struct impersonator-combinator ([args (listof static-contract?)]))
     [sc-map (static-contract? (static-contract? variance/c . -> . static-contract?) . -> . static-contract?)]
     [sc->contract (static-contract? (static-contract? . -> . syntax?) . -> . syntax?)]
     [sc->constraints (static-contract? (static-contract? . -> . contract-restrict?) . -> . contract-restrict?)]
@@ -115,6 +112,3 @@
 (struct combinator static-contract (args)
         #:property prop:combinator-name "combinator/sc"
         #:methods gen:custom-write [(define write-proc combinator-write-proc)])
-(struct flat-combinator combinator ())
-(struct chaperone-combinator combinator ())
-(struct impersonator-combinator combinator ())
