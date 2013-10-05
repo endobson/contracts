@@ -4,6 +4,7 @@
          "constraints.rkt"
          "combinators/any.rkt"
          "combinators/function.rkt"
+         "combinators/simple.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
          racket/set
@@ -12,6 +13,7 @@
 
 (provide (all-defined-out)
          (all-from-out "combinators/any.rkt"
+                       "combinators/simple.rkt"
                        "combinators/function.rkt"))
 
 

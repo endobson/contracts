@@ -6,7 +6,6 @@
 
 (provide
   (contract-out
-    (struct simple-contract ([args empty?] [syntax syntax?] [kind contract-kind?]))
     (struct recursive-contract ([names (listof identifier?)]
                                 [values (listof static-contract?)]
                                 [body static-contract?]))
@@ -30,18 +29,6 @@
   gen:sc-constraints)
 
 (define variance/c (or/c 'covariant 'contravariant 'invariant))
-
-(define (simple-contract-write-proc v port mode)
-  (match-define (simple-contract _ syntax kind) v)
-  (define-values (open close)
-    (if (equal? mode 0)
-        (values "(" ")")
-        (values "#<" ">")))
-  (display open port)
-  (fprintf port "~a/sc" kind)
-  (display " " port)
-  (write (syntax->datum syntax) port)
-  (display close port))
 
 (define (recursive-contract-write-proc v port mode)
   (match-define (recursive-contract names vals body) v)
@@ -131,8 +118,3 @@
 (struct flat-combinator combinator ())
 (struct chaperone-combinator combinator ())
 (struct impersonator-combinator combinator ())
-(struct simple-contract combinator (syntax kind)
-        #:methods gen:sc-mapable [(define (sc-map v f) v)]
-        #:methods gen:sc-contract [(define (sc->contract v f) (simple-contract-syntax v))]
-        #:methods gen:sc-constraints [(define (sc->constraints v f) (simple-contract-restrict (simple-contract-kind v)))]
-        #:methods gen:custom-write [(define write-proc simple-contract-write-proc)])

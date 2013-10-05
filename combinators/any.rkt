@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "../structures.rkt"
+(require "../structures.rkt" "simple.rkt"
          racket/match
          (except-in racket/contract recursive-contract)
          (for-syntax racket/base racket/syntax syntax/parse))
