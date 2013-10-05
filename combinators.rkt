@@ -84,6 +84,7 @@
     [(_ sc:static-combinator-form c:expr kind:contract-category-keyword)
      #'(begin
          (struct sc.struct-name combinator ()
+                 #:transparent
                  #:methods gen:sc
                    [(define (sc-map v f)
                       (sc.struct-name

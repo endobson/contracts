@@ -3,8 +3,7 @@
 (require "combinators.rkt"
          "structures.rkt"
          racket/set
-         unstable/debug
-         racket/trace
+         racket/list
          racket/match)
 
 (provide optimize)
@@ -67,8 +66,21 @@
 (module+ test
   (require rackunit)
   (provide optimizer-tests)
-  (define-simple-check (check-optimize variance argument expected)
-    (equal? (optimize argument variance) expected))
+  (define-check (check-optimize variance* argument* expected*)
+    (let ([variance variance*]
+          [argument argument*]
+          [expected expected*])
+      (with-check-info*
+        (list (make-check-info 'original argument)
+              (make-check-expected expected))
+        (lambda ()
+          (let  ([opt (optimize argument variance)])
+            (with-check-info* (list (make-check-actual opt))
+              (lambda ()
+                (unless (equal? opt expected)
+                  (fail-check)))))))))
+
+
   (define optimizer-tests
     (test-suite "Optimizer Tests"
       (check-optimize 'covariant
@@ -108,4 +120,13 @@
                      (list)
                      (list)
                      #f
-                     (list list?/sc))))))
+                     (list list?/sc)))
+      (check-optimize 'covariant
+        (case->/sc empty)
+        (case->/sc empty))
+      (check-optimize 'contravariant
+        (case->/sc empty)
+        (case->/sc empty))
+      (check-optimize 'covariant
+        (case->/sc (list (arr/sc (list (listof/sc any/sc)) (listof/sc (set/sc any/sc)) (list (listof/sc any/sc)))))
+        (case->/sc (list (arr/sc (list list?/sc) (listof/sc set?/sc) (list any/sc))))))))

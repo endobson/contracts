@@ -21,19 +21,21 @@
   (arr-combinator (arr-seq args rest range)))
 
 (struct case-combinator combinator ()
+  #:transparent
   #:property prop:combinator-name "case->/sc"
   #:methods gen:sc
     [(define (sc-map v f)
-       (case-combinator (map f (combinator-args v))))
+       (case-combinator (map (λ (a) (f a 'covariant)) (combinator-args v))))
      (define (sc->contract v f)
        #`(case-> #,@(map f (combinator-args v))))
      (define (sc->constraints v f)
        (merge-restricts* 'chaperone (map f (combinator-args v))))])
 (struct arr-combinator combinator ()
+  #:transparent
   #:property prop:combinator-name "arr/sc"
   #:methods gen:sc
     [(define (sc-map v f)
-       (arr-combinator (arr-seq-map f (combinator-args v))))
+       (arr-combinator (arr-seq-sc-map f (combinator-args v))))
      (define (sc->contract v f)
        (match v
         [(arr-combinator (arr-seq args rest range))
@@ -44,13 +46,13 @@
      (define (sc->constraints v f)
        (merge-restricts* 'chaperone (map f (arr-seq->list (combinator-args v)))))])
 
-(define (arr-seq-map f seq)
+(define (arr-seq-sc-map f seq)
   (match seq
     [(arr-seq args rest range)
      (arr-seq
-       (map f seq)
-       (and rest (f rest))
-       (and range (map f range)))]))
+       (map (λ (a) (f a 'contravariant)) args)
+       (and rest (f rest 'contravariant))
+       (and range (map (λ (a) (f a 'covariant)) range)))]))
 
 (define (arr-seq->list seq)
   (match seq
@@ -63,6 +65,7 @@
 
 
 (struct arr-seq (args rest range)
+   #:transparent
    #:property prop:sequence
      (match-lambda
        [(arr-seq args rest range)

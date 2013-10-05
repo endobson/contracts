@@ -92,12 +92,15 @@
 
 
 (struct static-contract ()
+        #:transparent
         #:property prop:custom-print-quotable 'never)
 
 (struct recursive-contract static-contract (names values body)
+        #:transparent
         #:methods gen:custom-write [(define write-proc recursive-contract-write-proc)])
 
 (struct recursive-contract-use static-contract (name)
+        #:transparent
         #:methods gen:sc
           [(define (sc-map v f) v)
            (define (sc->contract v f) (recursive-contract-use-name v))
@@ -105,5 +108,6 @@
         #:methods gen:custom-write [(define write-proc recursive-contract-use-write-proc)])
 
 (struct combinator static-contract (args)
+        #:transparent
         #:property prop:combinator-name "combinator/sc"
         #:methods gen:custom-write [(define write-proc combinator-write-proc)])
