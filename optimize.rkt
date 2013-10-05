@@ -25,9 +25,14 @@
     [(syntax/sc: (any/sc:)) syntax?/sc]
     [(promise/sc: (any/sc:)) promise?/sc]
     [(hash/sc: (any/sc:) (any/sc:)) hash?/sc]
+    [(any/sc:) sc]
+    [else sc]))
+
+
+(define (covariant-any/sc-reduce sc)
+  (match sc
     [(->/sc: mand-args opt-args mand-kw-args opt-kw-args rest-arg (list (any/sc:) ...))
      (function/sc mand-args opt-args mand-kw-args opt-kw-args rest-arg #f)]
-    [(any/sc:) sc]
     [else sc]))
 
 (define (flat-reduce sc)
@@ -50,12 +55,13 @@
 
 (define (optimize sc variance)
   (define (single-step sc variance)
-    (define (maybe-flat-reduce sc)
+    (define ((maybe/co reduce) sc)
       (case variance
-        [(covariant) (flat-reduce sc)]
+        [(covariant) (reduce sc)]
         [(contravariant invariant) sc]
-        [else (error 'maybe-flat-reduce "Bad variance ~a" variance)]))
-    (maybe-flat-reduce (any/sc-reduce sc)))
+        [else (error 'maybe/co "Bad variance ~a" variance)]))
+
+    ((maybe/co flat-reduce) ((maybe/co covariant-any/sc-reduce) (any/sc-reduce sc))))
 
   (define ((recur current-variance) sc variance)
     (define new-variance (combine-variance current-variance variance))
@@ -121,6 +127,19 @@
                      (list)
                      #f
                      (list list?/sc)))
+      (check-optimize 'contravariant
+        (function/sc (list (listof/sc any/sc))
+                     (list)
+                     (list)
+                     (list)
+                     #f
+                     (list any/sc))
+        (function/sc (list any/sc)
+                     (list)
+                     (list)
+                     (list)
+                     #f
+                     (list any/sc)))
       (check-optimize 'covariant
         (case->/sc empty)
         (case->/sc empty))
