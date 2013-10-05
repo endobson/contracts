@@ -1,30 +1,17 @@
 #lang racket/base
 
-(require "combinators/any.rkt"
-         "combinators/function.rkt"
-         "combinators/simple.rkt"
-         "combinators/control.rkt"
-         "combinators/case-lambda.rkt"
-         "combinators/struct.rkt"
-         "combinators/parametric.rkt"
-         "combinators/derived.rkt"
-         "combinators/object.rkt"
-         "combinators/structural.rkt")
+(require (for-syntax racket/base racket/runtime-path))
 
-(provide (all-from-out "combinators/any.rkt"
-                       "combinators/case-lambda.rkt"
-                       "combinators/simple.rkt"
-                       "combinators/control.rkt"
-                       "combinators/structural.rkt"
-                       "combinators/parametric.rkt"
-                       "combinators/struct.rkt"
-                       "combinators/object.rkt"
-                       "combinators/derived.rkt"
-                       "combinators/function.rkt"))
+(begin-for-syntax
+  (define-runtime-path combinator-dir "combinators")
+  (define base-file-names
+    (filter (lambda (v) (regexp-match? #rx".rkt$" v)) (directory-list combinator-dir)))
+  (define file-names (map (lambda (v) (string-append "combinators/" (path->string v)))
+                          base-file-names)))
 
+(define-syntax (gen-provides stx)
+  #`(begin
+      (require #,@file-names)
+      (provide (all-from-out #,@file-names))))
 
-
-
-
-
-
+(gen-provides)
