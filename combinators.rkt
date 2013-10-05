@@ -9,6 +9,7 @@
          "combinators/case-lambda.rkt"
          "combinators/struct.rkt"
          "combinators/parametric.rkt"
+         "combinators/object.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
          racket/set
@@ -22,6 +23,7 @@
                        "combinators/control.rkt"
                        "combinators/parametric.rkt"
                        "combinators/struct.rkt"
+                       "combinators/object.rkt"
                        "combinators/function.rkt"))
 
 
@@ -130,14 +132,6 @@
   ((sequence/sc (#:covariant)) sequence/c #:chaperone)
   ((continuation-mark-key/sc (#:invariant)) continuation-mark-key/c #:chaperone))
 
-
-;; Struct Definitions
-(struct struct-combinator combinator ())
-
-
-
-(define (object/sc* methods) (error 'nyi))
-(define (class/sc* methods) (error 'nyi))
 
 
 (define identifier/sc (flat/sc #'identifier?))

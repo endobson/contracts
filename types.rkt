@@ -136,11 +136,11 @@
       [(Instance: (? Mu? t))
        (t->sc (make-Instance (resolve-once t)))]
       [(Instance: (Class: _ _ (list (list names functions) ...)))
-       (object/sc* (map list names (map t->sc/method functions)))]
+       (object/sc (map list names (map t->sc/method functions)))]
       ;; init args not currently handled by class/c
       [(Class: _ (list (list by-name-inits by-name-init-tys _) ...) (list (list names functions) ...))
-       (class/sc* (map list names (map t->sc/method functions))
-                  (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
+       (class/sc (map list names (map t->sc/method functions))
+                 (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
       [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
        (cond
          [(assf (λ (v) (equal? v nm)) recursive-values) => second]
