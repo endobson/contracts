@@ -132,10 +132,6 @@
 (struct arr-combinator combinator ())
 
 
-;; Combinators
-(define (flat/sc ctc) (simple-contract null ctc 'flat))
-(define (chaperone/sc ctc) (simple-contract null ctc 'chaperone))
-(define (impersonator/sc ctc) (simple-contract null ctc 'impersonator))
 
 
 (define continuation-mark-key/sc (lambda (sc) (error 'nyi)))

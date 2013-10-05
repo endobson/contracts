@@ -106,7 +106,7 @@
              (let ((temporaries (generate-temporaries vs-nm)))
                (define rv (for/fold ((rv recursive-values)) ((temp temporaries)
                                                              (v-nm vs-nm))
-                            (hash-set rv v-nm (same (simple-contract temp 'impersonator)))))
+                            (hash-set rv v-nm (same (impersonator/sc temp)))))
                (parametric->/sc temporaries
                   (t->sc b #:recursive-values rv)))))]
       [(Mu: n b)

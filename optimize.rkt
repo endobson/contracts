@@ -33,7 +33,7 @@
 
 (define (flat-reduce sc)
   (match sc
-    [(simple-contract _ stx 'flat)
+    [(? flat/sc?)
      any/sc]
     [sc sc]))
 

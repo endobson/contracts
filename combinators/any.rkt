@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "../structures.rkt" "simple.rkt"
+(require "../structures.rkt" "../constraints.rkt"
          racket/match
          (except-in racket/contract recursive-contract)
          (for-syntax racket/base racket/syntax syntax/parse))
@@ -17,12 +17,15 @@
       (display "any/sc" port)
       (display "#<any/sc>" port)))
 
-(struct any-combinator simple-contract ()
+(struct any-combinator combinator ()
+        #:methods gen:sc-mapable [(define (sc-map v f) v)]
+        #:methods gen:sc-contract [(define (sc->contract v f) #'any/c)]
+        #:methods gen:sc-constraints [(define (sc->constraints v f) (simple-contract-restrict 'flat))]
         #:methods gen:custom-write [(define write-proc any-write-proc)])
 
 (define-match-expander any/sc:
   (syntax-parser
-    [(_) #'(any-combinator _ _ _)]))
+    [(_) #'(? any-combinator?)]))
 
-(define any/sc (any-combinator null #'any/c 'flat))
+(define any/sc (any-combinator null))
 
