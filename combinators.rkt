@@ -5,6 +5,7 @@
          "combinators/any.rkt"
          "combinators/function.rkt"
          "combinators/simple.rkt"
+         "combinators/control.rkt"
          "combinators/case-lambda.rkt"
          racket/list racket/match
          (for-syntax racket/base racket/syntax syntax/parse)
@@ -16,6 +17,7 @@
          (all-from-out "combinators/any.rkt"
                        "combinators/case-lambda.rkt"
                        "combinators/simple.rkt"
+                       "combinators/control.rkt"
                        "combinators/function.rkt"))
 
 
@@ -127,16 +129,9 @@
 
 ;; Struct Definitions
 (struct struct-combinator combinator ())
-(struct prompt-tag-combinator combinator ())
 (struct parametric-combinator combinator ())
 
 
-
-(define (prompt-tag/sc* scs call/cc-sc)
-  (prompt-tag-combinator
-    (λ (call/cc-ctc . others)
-       #`(prompt-tag/c #,@others #:call/cc call/cc-ctc)
-       (cons call/cc-sc scs))))
 
 (define (object/sc* methods) (error 'nyi))
 (define (class/sc* methods) (error 'nyi))
