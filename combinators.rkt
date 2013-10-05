@@ -121,21 +121,16 @@
   ((hash/sc (#:invariant #:flat) (#:invariant)) hash/c #:chaperone)
   ((box/sc (#:invariant)) box/c #:chaperone)
   ((parameter/sc (#:contravariant) (#:covariant)) parameter/c #:chaperone)
-  ((sequence/sc (#:covariant)) sequence/c #:chaperone))
+  ((sequence/sc (#:covariant)) sequence/c #:chaperone)
+  ((continuation-mark-key/sc (#:invariant)) continuation-mark-key/c #:chaperone))
 
 
 ;; Struct Definitions
 (struct struct-combinator combinator ())
-(struct continuation-mark-key-combinator combinator ())
 (struct prompt-tag-combinator combinator ())
 (struct parametric-combinator combinator ())
-(struct case->-combinator combinator ())
-(struct arr-combinator combinator ())
 
 
-
-
-(define continuation-mark-key/sc (lambda (sc) (error 'nyi)))
 
 (define (prompt-tag/sc* scs call/cc-sc)
   (prompt-tag-combinator
