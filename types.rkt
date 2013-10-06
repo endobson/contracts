@@ -101,7 +101,7 @@
                         "Recursive value lookup failed. ~a ~a" recursive-values v)))
          typed-side)]
       [(Poly: vs b)
-       (if (from-typed? typed-side)
+       (if (not (from-untyped? typed-side))
            ;; in positive position, no checking needed for the variables
            (let ((recursive-values (for/fold ([rv recursive-values]) ([v vs])
                                      (hash-set rv v (same any/sc)))))
