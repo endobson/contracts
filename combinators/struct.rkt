@@ -4,7 +4,7 @@
          racket/list racket/match
          unstable/contract
          (except-in racket/contract recursive-contract)
-         (for-template racket/base)
+         (for-template racket/base racket/contract/base)
          (for-syntax racket/base syntax/parse))
 
 (provide
@@ -25,7 +25,7 @@
      (define (sc->contract v f)
        (match v
         [(struct-combinator args name _)
-         #'(struct/c #,name #,@(map f args))]))
+         #`(struct/c #,name #,@(map f args))]))
      (define (sc->constraints v f)
        (match v
         [(struct-combinator args _ mut?)

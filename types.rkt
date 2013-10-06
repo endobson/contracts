@@ -21,7 +21,8 @@
 
 (provide
   (contract-out
-    [type->static-contract ((Type/c (-> none/c)) (#:typed-side boolean?) . ->* . static-contract?)]))
+    [type->static-contract
+      (parametric->/c (a) ((Type/c (-> a)) (#:typed-side boolean?) . ->* . (or/c a static-contract?)))]))
 
 (define any-wrap/sc (chaperone/sc #'any-wrap/c))
 
@@ -54,130 +55,133 @@
   (triple sc sc sc))
 
 
-(define (type->static-contract type fail #:typed-side [typed-side #t])
-  (let loop ([type type] [typed-side (if typed-side 'typed 'untyped)] [recursive-values (hash)])
-    (define (t->sc t #:recursive-values (recursive-values recursive-values))
-      (loop t typed-side recursive-values))
-    (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
-      (loop t (flip-side typed-side) recursive-values))
-    (define (t->sc/both t #:recursive-values (recursive-values recursive-values))
-      (loop t 'both recursive-values))
-    (define (t->sc/method t) (t->sc/function t fail typed-side recursive-values loop #t))
-    (define (t->sc/fun t) (t->sc/function t fail typed-side recursive-values loop #f))
-    (match type
-      [(or (App: _ _ _) (Name: _)) (t->sc (resolve-once type))]
-      [(Univ:) (if (from-typed? typed-side) any-wrap/sc any/sc)]
-      [(Mu: var (Union: (list (Value: '()) (Pair: elem-ty (F: var)))))
-       (listof/sc (t->sc elem-ty))]
-      [t (=> fail) (or (numeric-type->static-contract t) (fail))]
-      [(Base: sym cnt _ _)
-       (flat/sc #`(flat-named-contract '#,sym (flat-contract-predicate #,cnt)))]
-      [(Refinement: par p?)
-       (and/sc (t->sc par) (flat/sc p?))]
-      [(Union: elems)
-       (apply or/sc (map t->sc elems))]
-      [(and t (Function: _)) (t->sc/fun t)]
-      [(Set: t) (set/sc (t->sc t))]
-      [(Sequence: ts) (apply sequence/sc (map t->sc ts))]
-      [(Vector: t) (vectorof/sc (t->sc/both t))]
-      [(HeterogeneousVector: ts) (apply vector/sc (map t->sc/both ts))]
-      [(Box: t) (box/sc (t->sc/both t))]
-      [(Pair: t1 t2)
-       (cons/sc (t->sc t1) (t->sc t2))]
-      [(Promise: t)
-       (promise/sc (t->sc t))]
-      [(Opaque: p?)
-       (flat/sc #`(flat-named-contract (quote #,(syntax-e p?)) #,p?))]
-      [(Continuation-Mark-Keyof: t)
-       (continuation-mark-key/sc (t->sc t))]
-      ;; TODO: this is not quite right for case->
-      [(Prompt-Tagof: s (Function: (list (arr: (list ts ...) _ _ _ _))))
-       (prompt-tag/sc (map t->sc ts) (t->sc s))]
-      ;; TODO
-      [(F: v)
-       (triple-lookup
-         (hash-ref recursive-values v
-           (λ () (error 'type->static-contract
-                        "Recursive value lookup failed. ~a ~a" recursive-values v)))
-         typed-side)]
-      [(Poly: vs b)
-       (if (not (from-untyped? typed-side))
-           ;; in positive position, no checking needed for the variables
-           (let ((recursive-values (for/fold ([rv recursive-values]) ([v vs])
-                                     (hash-set rv v (same any/sc)))))
-             (t->sc b #:recursive-values recursive-values))
-           ;; in negative position, use parameteric contracts.
-           (match-let ([(Poly-names: vs-nm b) type])
-             (define function-type?
-               (let loop ([ty b])
-                 (match (resolve ty)
-                   [(Function: _) #t]
-                   [(Union: elems) (andmap loop elems)]
-                   [(Poly: _ body) (loop body)]
-                   [(PolyDots: _ body) (loop body)]
-                   [_ #f])))
-             (unless function-type?
-               (fail))
-             (let ((temporaries (generate-temporaries vs-nm)))
-               (define rv (for/fold ((rv recursive-values)) ((temp temporaries)
-                                                             (v-nm vs-nm))
-                            (hash-set rv v-nm (same (impersonator/sc temp)))))
-               (parametric->/sc temporaries
-                  (t->sc b #:recursive-values rv)))))]
-      [(Mu: n b)
-       (match-define (and n*s (list untyped-n* typed-n* both-n*)) (generate-temporaries (list n n n)))
-       (define rv
-         (hash-set recursive-values n
-                   (triple (recursive-contract-use untyped-n*)
-                           (recursive-contract-use typed-n*)
-                           (recursive-contract-use both-n*))))
-       (case typed-side
-         [(both) (recursive-contract
-                   (list both-n*)
-                   (list (loop b 'both rv))
-                   (recursive-contract-use both-n*))]
-         [(typed untyped)
-          ;; TODO not fail in cases that don't get used
-          (define untyped (loop b 'untyped rv))
-          (define typed (loop b 'typed rv))
-          (define both (loop b 'both rv))
+(define (type->static-contract type init-fail #:typed-side [typed-side #t])
+  (let/ec return
+    (define (fail) (return (init-fail)))
+    (let loop ([type type] [typed-side (if typed-side 'typed 'untyped)] [recursive-values (hash)])
+      (define (t->sc t #:recursive-values (recursive-values recursive-values))
+        (loop t typed-side recursive-values))
+      (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
+        (loop t (flip-side typed-side) recursive-values))
+      (define (t->sc/both t #:recursive-values (recursive-values recursive-values))
+        (loop t 'both recursive-values))
+      (define (t->sc/method t) (t->sc/function t fail typed-side recursive-values loop #t))
+      (define (t->sc/fun t) (t->sc/function t fail typed-side recursive-values loop #f))
+      (match type
+        [(or (App: _ _ _) (Name: _)) (t->sc (resolve-once type))]
+        [(Univ:) (if (from-typed? typed-side) any-wrap/sc any/sc)]
+        [(Mu: var (Union: (list (Value: '()) (Pair: elem-ty (F: var)))))
+         (listof/sc (t->sc elem-ty))]
+        [t (=> fail) (or (numeric-type->static-contract t) (fail))]
+        [(Base: sym cnt _ _)
+         (flat/sc #`(flat-named-contract '#,sym (flat-contract-predicate #,cnt)))]
+        [(Refinement: par p?)
+         (and/sc (t->sc par) (flat/sc p?))]
+        [(Union: elems)
+         (apply or/sc (map t->sc elems))]
+        [(and t (Function: _)) (t->sc/fun t)]
+        [(Set: t) (set/sc (t->sc t))]
+        [(Sequence: ts) (apply sequence/sc (map t->sc ts))]
+        [(Vector: t) (vectorof/sc (t->sc/both t))]
+        [(HeterogeneousVector: ts) (apply vector/sc (map t->sc/both ts))]
+        [(Box: t) (box/sc (t->sc/both t))]
+        [(Pair: t1 t2)
+         (cons/sc (t->sc t1) (t->sc t2))]
+        [(Promise: t)
+         (promise/sc (t->sc t))]
+        [(Opaque: p?)
+         (flat/sc #`(flat-named-contract (quote #,(syntax-e p?)) #,p?))]
+        [(Continuation-Mark-Keyof: t)
+         (continuation-mark-key/sc (t->sc t))]
+        ;; TODO: this is not quite right for case->
+        [(Prompt-Tagof: s (Function: (list (arr: (list ts ...) _ _ _ _))))
+         (prompt-tag/sc (map t->sc ts) (t->sc s))]
+        ;; TODO
+        [(F: v)
+         (triple-lookup
+           (hash-ref recursive-values v
+             (λ () (error 'type->static-contract
+                          "Recursive value lookup failed. ~a ~a" recursive-values v)))
+           typed-side)]
+        [(Poly: vs b)
+         (if (not (from-untyped? typed-side))
+             ;; in positive position, no checking needed for the variables
+             (let ((recursive-values (for/fold ([rv recursive-values]) ([v vs])
+                                       (hash-set rv v (same any/sc)))))
+               (t->sc b #:recursive-values recursive-values))
+             ;; in negative position, use parameteric contracts.
+             (match-let ([(Poly-names: vs-nm b) type])
+               (define function-type?
+                 (let loop ([ty b])
+                   (match (resolve ty)
+                     [(Function: _) #t]
+                     [(Union: elems) (andmap loop elems)]
+                     [(Poly: _ body) (loop body)]
+                     [(PolyDots: _ body) (loop body)]
+                     [_ #f])))
+               (unless function-type?
+                 (fail))
+               (let ((temporaries (generate-temporaries vs-nm)))
+                 (define rv (for/fold ((rv recursive-values)) ((temp temporaries)
+                                                               (v-nm vs-nm))
+                              (hash-set rv v-nm (same (impersonator/sc temp)))))
+                 (parametric->/sc temporaries
+                    (t->sc b #:recursive-values rv)))))]
+        [(Mu: n b)
+         (match-define (and n*s (list untyped-n* typed-n* both-n*)) (generate-temporaries (list n n n)))
+         (define rv
+           (hash-set recursive-values n
+                     (triple (recursive-contract-use untyped-n*)
+                             (recursive-contract-use typed-n*)
+                             (recursive-contract-use both-n*))))
+         (case typed-side
+           [(both) (recursive-contract
+                     (list both-n*)
+                     (list (loop b 'both rv))
+                     (recursive-contract-use both-n*))]
+           [(typed untyped)
+            ;; TODO not fail in cases that don't get used
+            (define untyped (loop b 'untyped rv))
+            (define typed (loop b 'typed rv))
+            (define both (loop b 'both rv))
   
-          (recursive-contract
-                   n*s
-                   (list untyped typed both)
-                   (recursive-contract-use (if (from-typed? typed-side) typed-n* untyped-n*)))])]
-      [(Instance: (? Mu? t))
-       (t->sc (make-Instance (resolve-once t)))]
-      [(Instance: (Class: _ _ (list (list names functions) ...)))
-       (object/sc (map list names (map t->sc/method functions)))]
-      ;; init args not currently handled by class/c
-      [(Class: _ (list (list by-name-inits by-name-init-tys _) ...) (list (list names functions) ...))
-       (class/sc (map list names (map t->sc/method functions))
-                 (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
-      [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
-       (cond
-         [(dict-ref recursive-values nm #f)]
-         [proc (fail)]
-         [poly?
-          (define nm* (generate-temporary #'n*))
-          (define fields
-            (for/list ([fty flds] [mut? mut?])
-              (t->sc fty #:recursive-values (hash-set
-                                              recursive-values
-                                              nm (recursive-contract-use nm*)))))
-          (recursive-contract nm* (struct/sc nm mut? fields))]
-         [else (flat/sc #`(flat-named-contract '#,(syntax-e pred?) #,pred?))])]
-      [(Syntax: (Base: 'Symbol _ _ _)) identifier?/sc]
-      [(Syntax: t)
-       (syntax/sc (t->sc t))]
-      [(Value: v)
-       (flat/sc #`(flat-named-contract '#,v (lambda (x) (equal? x '#,v))))]
-      [(Param: in out) 
-       (parameter/sc (t->sc in) (t->sc out))]
-      [(Hashtable: k v)
-       (hash/sc (t->sc k) (t->sc v))]
-      [else
-       (fail)])))
+            (recursive-contract
+                     n*s
+                     (list untyped typed both)
+                     (recursive-contract-use (if (from-typed? typed-side) typed-n* untyped-n*)))])]
+        [(Instance: (? Mu? t))
+         (t->sc (make-Instance (resolve-once t)))]
+        [(Instance: (Class: _ _ (list (list names functions) ...)))
+         (object/sc (map list names (map t->sc/method functions)))]
+        ;; init args not currently handled by class/c
+        [(Class: _ (list (list by-name-inits by-name-init-tys _) ...) (list (list names functions) ...))
+         (class/sc (map list names (map t->sc/method functions))
+                   (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
+        [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
+         (cond
+           [(dict-ref recursive-values nm #f)]
+           [proc (fail)]
+           [poly?
+            (define nm* (generate-temporary #'n*))
+            (define fields
+              (for/list ([fty flds] [mut? mut?])
+                (t->sc fty #:recursive-values (hash-set
+                                                recursive-values
+                                                nm (recursive-contract-use nm*)))))
+            (recursive-contract (list nm*) (list (struct/sc nm (ormap values mut?) fields))
+                                (recursive-contract-use nm*))]
+           [else (flat/sc #`(flat-named-contract '#,(syntax-e pred?) #,pred?))])]
+        [(Syntax: (Base: 'Symbol _ _ _)) identifier?/sc]
+        [(Syntax: t)
+         (syntax/sc (t->sc t))]
+        [(Value: v)
+         (flat/sc #`(flat-named-contract '#,v (lambda (x) (equal? x '#,v))))]
+        [(Param: in out) 
+         (parameter/sc (t->sc in) (t->sc out))]
+        [(Hashtable: k v)
+         (hash/sc (t->sc k) (t->sc v))]
+        [else
+         (fail)]))))
 
 (define (t->sc/function f fail typed-side recursive-values loop method?)
   (define (t->sc t #:recursive-values (recursive-values recursive-values))
