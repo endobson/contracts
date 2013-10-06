@@ -21,7 +21,7 @@
 
 (provide
   (contract-out
-    [type->static-contract (Type/c (-> any/c) . -> . static-contract?)]))
+    [type->static-contract (Type/c (-> none/c) . -> . static-contract?)]))
 
 (define any-wrap/sc (chaperone/sc #'any-wrap/c))
 
@@ -55,9 +55,7 @@
 
 
 (define (type->static-contract type fail #:typed-side [typed-side #t])
-
   (let loop ([type type] [typed-side (if typed-side 'typed 'untyped)] [recursive-values (hash)])
-    (displayln type)
     (define (t->sc t #:recursive-values (recursive-values recursive-values))
       (loop t typed-side recursive-values))
     (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
@@ -129,7 +127,7 @@
           (define untyped (loop b 'untyped rv))
           (define typed (loop b 'typed rv))
           (define both (loop b 'both rv))
-
+  
           (recursive-contract
                    n*s
                    (list untyped typed both)
@@ -146,8 +144,8 @@
        (cond
          ; TODO reenable this code
          ;[(assf (λ (v) (equal? v nm)) recursive-values) => second]
-         [#t (exit (fail))]
-         [proc (exit (fail))]
+         [#t (fail)]
+         [proc (fail)]
          [poly?
           (define nm* (generate-temporary #'n*))
           (define fields
@@ -167,7 +165,7 @@
       [(Hashtable: k v)
        (hash/sc (t->sc k) (t->sc v))]
       [else
-       (exit (fail))])))
+       (fail)])))
 
 (define (t->sc/function f fail typed-side recursive-values loop method?)
   (define (t->sc t #:recursive-values (recursive-values recursive-values))
@@ -225,7 +223,7 @@
               (values (map conv mand-kws)
                       (map conv opt-kws))))
           (define range (map t->sc rngs))
-          (define rest (and rst (listof/sc (t->sc/neg rest))))
+          (define rest (and rst (listof/sc (t->sc/neg rst))))
           (function/sc mand-args opt-args mand-kws opt-kws rest range)])]
       [else
        (define ((f [case-> #f]) a)
@@ -235,7 +233,7 @@
               (let-values ([(mand-kws opt-kws) (partition-kws kws)])
                 ;; Garr, I hate case->!
                 (when (and (not (empty? kws)) case->)
-                  (exit (fail)))
+                  (fail))
                 (if case->
                   (arr/sc (map t->sc/neg dom) (and rst (t->sc/neg rst)) (map t->sc rngs))
                   (function/sc
@@ -253,14 +251,14 @@
            [(arr: dom (Values: (list (Result: rngs _ _) ...)) rst #f kws)
             (if typed-side
                 (convert-arr a)
-                (exit (fail)))]
-           [_ (exit (fail))]))
+                (fail))]
+           [_ (fail)]))
        (unless (no-duplicates (for/list ([t arrs])
                                 (match t
                                   [(arr: dom _ _ _ _) (length dom)]
                                   ;; is there something more sensible here?
                                   [(top-arr:) (int-err "got top-arr")])))
-         (exit (fail)))
+         (fail))
        (if (= (length arrs) 1)
            ((f #f) (first arrs))
            (case->/sc (map (f #t) arrs)))])]
