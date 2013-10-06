@@ -24,7 +24,7 @@
      (define (sc->contract v f)
        (match v
         [(parametric-combinator (list arg) vars)
-         #'(parametric->/sc #,vars #,(f arg))]))
+         #`(parametric->/c #,vars #,(f arg))]))
      (define (sc->constraints v f)
        (match v
         [(parametric-combinator (list arg) vars)

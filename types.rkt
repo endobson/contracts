@@ -95,15 +95,29 @@
        (prompt-tag/sc (map t->sc ts) (t->sc s))]
       ;; TODO
       [(F: v)
-       (triple-lookup (hash-ref recursive-values v) typed-side)]
+       (triple-lookup
+         (hash-ref recursive-values v
+           (λ () (error 'type->static-contract
+                        "Recursive value lookup failed. ~a ~a" recursive-values v)))
+         typed-side)]
       [(Poly: vs b)
        (if (from-typed? typed-side)
            ;; in positive position, no checking needed for the variables
            (let ((recursive-values (for/fold ([rv recursive-values]) ([v vs])
                                      (hash-set rv v (same any/sc)))))
              (t->sc b #:recursive-values recursive-values))
-           ;; in negative position, use `parameteric/c'
-           (match-let ([(Poly-names: vs-nm _) type])
+           ;; in negative position, use parameteric contracts.
+           (match-let ([(Poly-names: vs-nm b) type])
+             (define function-type?
+               (let loop ([ty b])
+                 (match (resolve ty)
+                   [(Function: _) #t]
+                   [(Union: elems) (andmap loop elems)]
+                   [(Poly: _ body) (loop body)]
+                   [(PolyDots: _ body) (loop body)]
+                   [_ #f])))
+             (unless function-type?
+               (fail))
              (let ((temporaries (generate-temporaries vs-nm)))
                (define rv (for/fold ((rv recursive-values)) ((temp temporaries)
                                                              (v-nm vs-nm))
