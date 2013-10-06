@@ -57,6 +57,7 @@
 (define (type->static-contract type fail #:typed-side [typed-side #t])
 
   (let loop ([type type] [typed-side (if typed-side 'typed 'untyped)] [recursive-values (hash)])
+    (displayln type)
     (define (t->sc t #:recursive-values (recursive-values recursive-values))
       (loop t typed-side recursive-values))
     (define (t->sc/neg t #:recursive-values (recursive-values recursive-values))
@@ -143,7 +144,9 @@
                  (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
       [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
        (cond
-         [(assf (λ (v) (equal? v nm)) recursive-values) => second]
+         ; TODO reenable this code
+         ;[(assf (λ (v) (equal? v nm)) recursive-values) => second]
+         [#t (exit (fail))]
          [proc (exit (fail))]
          [poly?
           (define nm* (generate-temporary #'n*))

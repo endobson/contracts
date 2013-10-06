@@ -52,12 +52,12 @@
     [pattern (name:id . rest:argument-description)
              #:with struct-name (generate-temporary #'name)
              #:with matcher-name (format-id #'name "~a:" #'name)
-             #:with definition #'(define name #'(λ args (struct-name args)))
-             #:attr combinator2 #'(λ args (struct-name args))
+             #:with definition #'(define name (λ args (struct-name args)))
+             #:attr combinator2 #'(λ (constructor) (λ args (constructor args)))
              #:with ->restricts
                #'(lambda (v recur)
                    (for/list ([arg (in-list (combinator-args v))]
-                              [kind (in-value 'pos.category)])
+                              [kind (in-value 'rest.category-stx)])
                      (add-constraint (recur arg) kind)))
              #:with matcher
                #'(define-match-expander matcher-name

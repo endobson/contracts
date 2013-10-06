@@ -36,6 +36,7 @@
                            (-Symbol -Symbol . -> . -Symbol)))
               (t/sc (-Promise -Number))
               (t/sc (-lst -Symbol))
+              (t/sc -Boolean)
               (t/sc Univ)
               (t/sc (-set Univ))
               (t/sc (-poly (a) (-lst a)))
