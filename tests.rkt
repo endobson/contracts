@@ -43,6 +43,7 @@
               (t/fail ((-poly (a) (-vec a)) . -> . -Symbol))
               (t/sc (-mu a (-lst a)))
               (t/sc (-mu a (-box a)))
+              (t/sc (-mu sexp (Un (-val '()) -Symbol (-pair sexp sexp) (-vec sexp) (-box sexp))))
               (t/sc (-mu a (-> a a)))
               (t/sc (-seq -Symbol))
               ))

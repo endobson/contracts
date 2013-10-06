@@ -63,9 +63,8 @@
              #:attr combinator2 #'(λ (constructor) (λ args (constructor args)))
              #:with ->restricts
                #'(lambda (v recur)
-                   (for/list ([arg (in-list (combinator-args v))]
-                              [kind (in-value 'rest.category-stx)])
-                     (add-constraint (recur arg) kind)))
+                   (for/list ([arg (in-list (combinator-args v))])
+                     (add-constraint (recur arg) 'rest.category-stx)))
              #:with matcher
                #'(define-match-expander matcher-name
                    (syntax-parser

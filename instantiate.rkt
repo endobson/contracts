@@ -14,6 +14,10 @@
 
 (provide instantiate)
 
+(module* internals #f
+  (provide compute-constraints
+           compute-recursive-kinds
+           instantiate/inner))
 
 
 (define (instantiate sc)
