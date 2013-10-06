@@ -79,9 +79,9 @@
       [(and t (Function: _)) (t->sc/fun t)]
       [(Set: t) (set/sc (t->sc t))]
       [(Sequence: ts) (apply sequence/sc (map t->sc ts))]
-      [(Vector: t) (vectorof/sc (t->sc t))]
-      [(HeterogeneousVector: ts) (apply vector/sc (map t->sc ts))]
-      [(Box: t) (box/sc (t->sc t))]
+      [(Vector: t) (vectorof/sc (t->sc/both t))]
+      [(HeterogeneousVector: ts) (apply vector/sc (map t->sc/both ts))]
+      [(Box: t) (box/sc (t->sc/both t))]
       [(Pair: t1 t2)
        (cons/sc (t->sc t1) (t->sc t2))]
       [(Promise: t)
