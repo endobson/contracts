@@ -2,7 +2,7 @@
 (require "../structures.rkt"
          "../constraints.rkt"
          racket/list racket/match
-         (for-syntax racket/base racket/syntax syntax/parse)
+         (for-syntax racket/base racket/syntax syntax/stx syntax/parse)
          racket/set
          unstable/contract
          (except-in racket/contract recursive-contract))
@@ -48,7 +48,10 @@
                    (syntax-parser
                      [(_ pos.name ...)
                       #'(struct-name (list pos.name ...))]))
-             #:with provides #'(provide name matcher-name)]
+
+             #:with ctc
+                 #`(-> #,@(stx-map (lambda (_) #'static-contract?) #'(pos ...)) static-contract?)
+             #:with provides #'(provide (contract-out [name ctc]) matcher-name)]
     [pattern (name:id . rest:argument-description)
              #:with struct-name (generate-temporary #'name)
              #:with matcher-name (format-id #'name "~a:" #'name)
@@ -64,7 +67,9 @@
                    (syntax-parser
                     [(_ ctc (... ...))
                      #'(struct-name _ (list ctc (... ...)))]))
-             #:with provides #'(provide name matcher-name)]))
+             #:with ctc
+                 #'(->* () #:rest (listof static-contract?) static-contract?)
+             #:with provides #'(provide (contract-out [name ctc]) matcher-name)]))
 
 
 (define-syntax (combinator-struct stx)
@@ -110,5 +115,5 @@
   ((hash/sc (#:invariant #:flat) (#:invariant)) hash/c #:chaperone)
   ((box/sc (#:invariant)) box/c #:chaperone)
   ((parameter/sc (#:contravariant) (#:covariant)) parameter/c #:chaperone)
-  ((sequence/sc (#:covariant)) sequence/c #:chaperone)
+  ((sequence/sc . (#:covariant)) sequence/c #:impersonator)
   ((continuation-mark-key/sc (#:invariant)) continuation-mark-key/c #:chaperone))

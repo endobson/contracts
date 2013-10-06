@@ -78,7 +78,7 @@
        (apply or/sc (map t->sc elems))]
       [(and t (Function: _)) (t->sc/fun t)]
       [(Set: t) (set/sc (t->sc t))]
-      [(Sequence: ts) (sequence/sc (map t->sc ts))]
+      [(Sequence: ts) (apply sequence/sc (map t->sc ts))]
       [(Vector: t) (vectorof/sc (t->sc t))]
       [(HeterogeneousVector: ts) (apply vector/sc (map t->sc ts))]
       [(Box: t) (box/sc (t->sc t))]

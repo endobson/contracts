@@ -43,6 +43,7 @@
               (t/sc (-mu a (-lst a)))
               (t/sc (-mu a (-box a)))
               (t/sc (-mu a (-> a a)))
+              (t/sc (-seq -Symbol))
               ))
 
 
