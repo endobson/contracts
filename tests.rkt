@@ -42,6 +42,8 @@
                            (-Symbol . -> . -Symbol)))
               (t/sc (cl->* (-> -Symbol)
                            (-Symbol -Symbol . -> . -Symbol)))
+              (t/sc (cl->* (-Symbol . -> . -Symbol)
+                           (-Symbol -Symbol . -> . -Symbol)))
               (t/sc (-Promise -Number))
               (t/sc (-lst -Symbol))
               (t/sc -Boolean)

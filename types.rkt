@@ -156,9 +156,7 @@
                  (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
       [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
        (cond
-         ; TODO reenable this code
-         ;[(assf (λ (v) (equal? v nm)) recursive-values) => second]
-         [#t (fail)]
+         [(dict-ref recursive-values nm #f)]
          [proc (fail)]
          [poly?
           (define nm* (generate-temporary #'n*))
