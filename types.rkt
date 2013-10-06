@@ -21,7 +21,7 @@
 
 (provide
   (contract-out
-    [type->static-contract (Type/c (-> none/c) . -> . static-contract?)]))
+    [type->static-contract ((Type/c (-> none/c)) (#:typed-side boolean?) . ->* . static-contract?)]))
 
 (define any-wrap/sc (chaperone/sc #'any-wrap/c))
 

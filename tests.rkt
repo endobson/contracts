@@ -27,6 +27,13 @@
                                     (type->static-contract e (lambda _ (exit #t)))
                                     (error "type could be converted to contract")))))
 
+(define-syntax-rule (t/fail-import e)
+  (test-not-exn (format "~a" e) (lambda ()
+                                  (let/ec exit
+                                    (type->static-contract e (lambda _ (exit #t)) #:typed-side #f)
+                                    (error "type could be converted to contract")))))
+
+
 (define contract-tests
   (test-suite "Contract Tests"
               (t/sc (-Number . -> . -Number))
@@ -41,6 +48,7 @@
               (t/sc (-set Univ))
               (t/sc (-poly (a) (-lst a)))
               (t/fail ((-poly (a) (-vec a)) . -> . -Symbol))
+              (t/fail-import (-poly (a) (-lst a)))
               (t/sc (-mu a (-lst a)))
               (t/sc (-mu a (-box a)))
               (t/sc (-mu sexp (Un (-val '()) -Symbol (-pair sexp sexp) (-vec sexp) (-box sexp))))
