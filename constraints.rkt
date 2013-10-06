@@ -128,10 +128,15 @@
   (define id-values
     (for/hash (((name var) vars))
       (values name (hash-ref var-values var))))
-  (add-recursive-values
-    (instantiate-cr body (lambda (id) (hash-ref id-values id)))
+
+  (define new-rec-values
     (for/hash (((name value) id-values))
-      (values name (contract-restrict-value value)))))
+      (values name (contract-restrict-value value))))
+
+  (for/fold ([cr (instantiate-cr body (lambda (id) (hash-ref id-values id)))])
+            ([rec-values (cons new-rec-values (map contract-restrict-recursive-values
+                                                   (hash-values id-values)))])
+    (add-recursive-values cr rec-values)))
 
 
 

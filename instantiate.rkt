@@ -32,7 +32,7 @@
   (define (recur sc)
     (match sc
       [(recursive-contract names values body)
-       (close-loop names (map recur values) (recur body)) ]
+       (close-loop names (map recur values) (recur body))]
       [(? sc?)
        (sc->constraints sc recur)]))
   (define constraints (recur sc))
