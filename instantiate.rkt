@@ -65,12 +65,16 @@
   (define (recur sc)
     (match sc
       [(recursive-contract names values body)
+       (define raw-names (generate-temporaries names))
+       (define raw-bindings
+          (for/list ([raw-name raw-names] [value values])
+            #`[#,raw-name #,(recur value)]))
        (define bindings
-         (for/list ([name names] [value values])
-            #`[#,name (c:recursive-contract #,(recur value) 
+         (for/list ([name names] [raw-name raw-names])
+            #`[#,name (c:recursive-contract #,raw-name
                                             #,(kind->keyword
                                                 (hash-ref recursive-kinds name)))]))
-       #`(letrec #,bindings #,(recur body))]
+       #`(letrec (#,@bindings #,@raw-bindings) #,(recur body))]
       [(? sc? sc)
        (sc->contract sc recur)]))
   (recur sc))

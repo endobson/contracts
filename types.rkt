@@ -263,9 +263,9 @@
             (convert-arr a)]
            ;; functions with filters or objects
            [(arr: dom (Values: (list (Result: rngs _ _) ...)) rst #f kws)
-            (if typed-side
-                (convert-arr a)
-                (fail))]
+            (if (from-untyped? typed-side)
+                (fail)
+                (convert-arr a))]
            [_ (fail)]))
        (unless (no-duplicates (for/list ([t arrs])
                                 (match t
