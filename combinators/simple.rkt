@@ -6,7 +6,6 @@
   "../constraints.rkt"
   racket/list
   racket/match
-  (for-template racket/base)
   (except-in racket/contract recursive-contract))
 
 (provide

@@ -4,7 +4,7 @@
          racket/list racket/match
          unstable/contract
          (except-in racket/contract recursive-contract)
-         (for-template racket/base)
+         (for-template racket/base racket/contract/parametric)
          (for-syntax racket/base syntax/parse))
 
 (provide

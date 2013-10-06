@@ -5,6 +5,7 @@
   racket/match
   racket/dict
   racket/sequence
+  (for-template racket/base (prefix-in c: racket/contract))
   "kinds.rkt"
   "structures.rkt"
   "constraints.rkt"

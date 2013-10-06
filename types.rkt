@@ -268,8 +268,8 @@
  (flat/sc #'(flat-named-contract 'name body)))
 (module predicates racket/base
   (provide nonnegative? nonpositive?)
-  (define nonnegative? #'(lambda (x) (>= x 0)))
-  (define nonpositive? #'(lambda (x) (<= x 0))))
+  (define nonnegative? (lambda (x) (>= x 0)))
+  (define nonpositive? (lambda (x) (<= x 0))))
 (require (for-template 'predicates))
 
 (define positive-byte/sc (numeric/sc Positive-Byte (and/c byte? positive?)))
@@ -281,7 +281,7 @@
 (define nonpositive-fixnum/sc (numeric/sc Nonpositive-Fixnum (and/c fixnum? non-positive)))
 (define fixnum/sc (numeric/sc Fixnum fixnum?))
 (define positive-integer/sc (numeric/sc Positive-Integer (and/c exact-integer? positive?)))
-(define natural/sc (numeric/sc Natural exact-nonegative-integer?))
+(define natural/sc (numeric/sc Natural exact-nonnegative-integer?))
 (define negative-integer/sc (numeric/sc Negative-Integer (and/c exact-integer? negative?)))
 (define nonpositive-integer/sc (numeric/sc Nonpositive-Integer (and/c exact-integer? nonpostive?)))
 (define integer/sc (numeric/sc Integer exact-integer?))
