@@ -97,6 +97,11 @@
 
 (struct recursive-contract static-contract (names values body)
         #:transparent
+        #:methods gen:sc
+          [(define (sc-map v f)
+             (match v
+               [(recursive-contract names values body)
+                (recursive-contract names (map (λ (v) (f v 'covariant)) values) (f body 'covariant))]))]
         #:methods gen:custom-write [(define write-proc recursive-contract-write-proc)])
 
 (struct recursive-contract-use static-contract (name)
