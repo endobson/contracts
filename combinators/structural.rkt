@@ -5,6 +5,7 @@
          (for-syntax racket/base racket/syntax syntax/stx syntax/parse)
          racket/set
          unstable/contract
+         (for-template racket/base racket/contract/base)
          (except-in racket/contract recursive-contract))
 
 

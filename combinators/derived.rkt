@@ -1,5 +1,6 @@
 #lang racket/base
-(require "simple.rkt")
+(require "simple.rkt"
+         (for-template racket/base))
 (provide (all-defined-out))
 
 (define identifier?/sc (flat/sc #'identifier?))
