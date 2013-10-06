@@ -4,9 +4,12 @@
          "structures.rkt"
          racket/set
          racket/list
+         (except-in racket/contract recursive-contract)
          racket/match)
 
-(provide optimize)
+(provide 
+  (contract-out
+    [optimize (static-contract? (or/c 'covariant 'contravariant 'invariant ) . -> . static-contract?)]))
 
 
 (define (any/sc-reduce sc)
