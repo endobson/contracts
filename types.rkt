@@ -173,7 +173,7 @@
       [(Syntax: t)
        (syntax/sc (t->sc t))]
       [(Value: v)
-       (flat/sc #`(flat-named-contract #,(format "~a" v) (lambda (x) (equal? x '#,v))))]
+       (flat/sc #`(flat-named-contract '#,v (lambda (x) (equal? x '#,v))))]
       [(Param: in out) 
        (parameter/sc (t->sc in) (t->sc out))]
       [(Hashtable: k v)
