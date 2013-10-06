@@ -18,6 +18,7 @@
   add-constraint
   close-loop
   (contract-out
+    [exn:fail:constraint-failure? predicate/c]
     [validate-constraints (contract-restrict? . -> . void?)])
   contract-restrict-recursive-values
 
@@ -42,6 +43,8 @@
   (struct contract-restrict (value recursive-values constraints) #:transparent))
 (require 'structs)
 (provide (struct-out kind-max))
+
+(struct exn:fail:constraint-failure exn:fail ())
 
 (define (free-id-set . elems)
   (for/fold ([table (make-immutable-free-id-table)])
@@ -139,5 +142,5 @@
        (match const
         [(constraint (kind-max (app dict-count 0) kind) bound)
          (unless (contract-kind<= kind bound)
-           (error 'validate-constraints "Violated constraint ~a" cr))]))]))
+           (raise (exn:fail:constraint-failure "Violated constraint ~a" (current-continuation-marks))))]))]))
 

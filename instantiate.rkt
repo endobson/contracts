@@ -12,7 +12,9 @@
   "equations.rkt")
 (require (prefix-in c: racket/contract))
 
-(provide instantiate)
+(provide
+  (c:contract-out
+    [instantiate ((static-contract? (c:-> c:none/c)) (contract-kind?) . c:->* . syntax?)]))
 
 (module* internals #f
   (provide compute-constraints
@@ -20,10 +22,13 @@
            instantiate/inner))
 
 
-(define (instantiate sc)
-  (instantiate/inner sc (compute-recursive-kinds (contract-restrict-recursive-values (compute-constraints sc)))))
+(define (instantiate sc fail [kind 'impersonator])
+  (with-handlers [(exn:fail:constraint-failure? (lambda (exn) (fail)))]
+    (instantiate/inner sc
+      (compute-recursive-kinds
+        (contract-restrict-recursive-values (compute-constraints sc kind))))))
 
-(define (compute-constraints sc)
+(define (compute-constraints sc max-kind)
   (define (recur sc)
     (match sc
       [(recursive-contract names values body)
@@ -31,7 +36,7 @@
       [(? sc?)
        (sc->constraints sc recur)]))
   (define constraints (recur sc))
-  (validate-constraints constraints)
+  (validate-constraints (add-constraint constraints max-kind))
   constraints)
 
 

@@ -16,10 +16,11 @@
 (define-syntax-rule (t/sc e)
   (test-case (format "~a" e)
     (define sc
-       (type->static-contract e (lambda _ (error "type could not be converted to contract"))))
-    (define ctc (instantiate sc))
-    (with-check-info (['contract (syntax->datum ctc)])
-      (eval-syntax ctc ns))))
+       (type->static-contract e (lambda _ (error "type could not be converted to static-contract"))))
+    (with-check-info (['static-contract sc])
+      (define ctc (instantiate sc (lambda _ (error "static-contract could not be converted to a contract"))))
+      (with-check-info (['contract (syntax->datum ctc)])
+        (eval-syntax ctc ns)))))
 
 (define-syntax-rule (t/fail e)
   (test-not-exn (format "~a" e) (lambda ()
