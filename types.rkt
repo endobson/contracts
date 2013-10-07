@@ -155,8 +155,10 @@
          (object/sc (map list names (map t->sc/method functions)))]
         ;; init args not currently handled by class/c
         [(Class: _ (list (list by-name-inits by-name-init-tys _) ...) (list (list names functions) ...))
-         (class/sc (map list names (map t->sc/method functions))
-                   (map list by-name-inits (map t->sc/neg by-name-init-tys)))]
+         (class/sc (append
+                     (map list names (map t->sc/method functions))
+                     (map list by-name-inits (map t->sc/neg by-name-init-tys)))
+                   #f empty empty)]
         [(Struct: nm par (list (fld: flds acc-ids mut?) ...) proc poly? pred?)
          (cond
            [(dict-ref recursive-values nm #f)]
