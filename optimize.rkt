@@ -144,6 +144,9 @@
       (check-optimize 'contravariant
         (case->/sc empty)
         (case->/sc empty))
+      (check-optimize 'covariant
+        (parameter/sc list?/sc (flat/sc #'symbol?))
+        (parameter/sc list?/sc any/sc))
       (check-optimize 'contravariant
         (case->/sc (list (arr/sc (list (listof/sc any/sc)) (listof/sc (set/sc any/sc)) (list (listof/sc any/sc)))))
         (case->/sc (list (arr/sc (list any/sc) any/sc (list list?/sc)))))

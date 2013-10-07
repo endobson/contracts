@@ -16,7 +16,7 @@
   (define-syntax-class variance-keyword
     #:attributes (variance)
     [pattern (~and kw (~or #:covariant #:contravariant #:invariant))
-             #:attr variance (string->symbol (keyword->string (syntax-e (attribute kw))))])
+             #:with variance (string->symbol (keyword->string (syntax-e (attribute kw))))])
 
   (define-syntax-class contract-category-keyword
     #:attributes (category category-stx)
@@ -34,7 +34,7 @@
              #:with category-stx (attribute category)])
 
   (define-syntax-class static-combinator-form
-    #:attributes (name struct-name definition combinator2 ->restricts matcher provides)
+    #:attributes (name struct-name definition combinator2 ->restricts matcher provides map)
     [pattern (name:id pos:argument-description ... )
              #:with struct-name (generate-temporary #'name)
              #:with matcher-name (format-id #'name "~a:" #'name)
@@ -52,7 +52,12 @@
                    (syntax-parser
                      [(_ pos.name ...)
                       #'(struct-name (list pos.name ...))]))
-
+             #:with map
+               #'(lambda (v f)
+                   (struct-name
+                     (for/list ([a (in-list (combinator-args v))]
+                                [kind (in-list (list 'pos.variance ...))])
+                       (f a kind))))
              #:with ctc
                  #`(-> #,@(stx-map (lambda (_) #'static-contract?) #'(pos ...)) static-contract?)
              #:with provides #'(provide (contract-out [name ctc]) matcher-name)]
@@ -70,6 +75,11 @@
                    (syntax-parser
                     [(_ ctc (... ...))
                      #'(struct-name _ (list ctc (... ...)))]))
+             #:with map
+               #'(lambda (v f)
+                   (struct-name
+                     (for/list ([a (in-list (combinator-args v))])
+                       (f a 'rest.variance))))
              #:with ctc
                  #'(->* () #:rest (listof static-contract?) static-contract?)
              #:with provides #'(provide (contract-out [name ctc]) matcher-name)]))
@@ -82,10 +92,7 @@
          (struct sc.struct-name combinator ()
                  #:transparent
                  #:methods gen:sc
-                   [(define (sc-map v f)
-                      (sc.struct-name
-                        (for/list ((a (combinator-args v)))
-                          (f a 'covariant))))
+                   [(define sc-map sc.map)
                     (define (sc->contract v recur)
                       (apply
                         (sc.combinator2 (lambda (args) #`(c #,@args)))
